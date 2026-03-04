@@ -1,0 +1,41 @@
+# ============================================================
+# DATACHAT BI PLATFORM - BACKEND DEPENDENCIES
+# ============================================================
+
+# --- Web Framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.9
+
+# --- Database ---
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.9
+alembic==1.13.3
+
+# --- Data Validation ---
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# --- Environment ---
+python-dotenv==1.0.1
+
+# --- Text-to-SQL (Vanna 2.0) ---
+vanna==0.7.5
+chromadb==0.5.18
+
+# --- LLM Providers ---
+openai==1.54.3
+
+# --- Data Processing ---
+pandas==2.2.0
+numpy==1.26.4
+
+# --- HTTP Client ---
+httpx==0.27.2
+requests==2.32.3
+
+# --- Utilities ---
+python-dateutil==2.9.0
+
+# --- Logging ---
+structlog==24.4.0

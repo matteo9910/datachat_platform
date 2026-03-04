@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# ChromaDB
+backend/data/chromadb/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+backend/logs/*.log
+*.log
+
+# Backup
+*.bak
+*.backup
+
+# Power BI (backup locali)
+*.pbix.bak
+backend/data/powerbi/backups/
+
+# Compiled frontend
+frontend/dist/
+
+# Claude/Factory (local config only)
+.claude/
+.factory/

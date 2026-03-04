@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://datachat_user:AIEngineeringPOC@localhost:5432/datachat_db"
+      ],
+      "env": {
+        "POSTGRES_READ_ONLY": "true"
+      }
+    }
+  }
+}
