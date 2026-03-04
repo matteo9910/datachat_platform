@@ -33,6 +33,7 @@ yarn-error.log*
 
 # ChromaDB
 backend/data/chromadb/
+backend/backend/data/chromadb/
 
 # IDE
 .vscode/
