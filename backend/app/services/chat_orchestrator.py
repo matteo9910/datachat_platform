@@ -15,6 +15,8 @@ from app.services.chart_service import create_chart_service
 from app.services.metadata_service import metadata_service
 from app.dependencies import SessionLocal
 from app.config import settings
+from app.database import get_system_session_factory
+from app.models.system import Instruction, InstructionType
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,37 @@ class ChatOrchestrator:
         self.vanna = get_vanna_service(llm_provider=self.llm_provider)
         self.chart_service = create_chart_service(llm_provider=self.llm_provider)
         logger.info(f"ChatOrchestrator initialized with provider={self.llm_provider}")
+
+    def _fetch_instructions(self, query: str) -> List[str]:
+        """
+        Fetch matching instructions from the system DB.
+
+        - Global instructions are always included.
+        - Topic instructions are included only when the user's query
+          contains the topic keyword (case-insensitive substring match).
+
+        Returns a list of instruction text strings.
+        """
+        try:
+            SystemSession = get_system_session_factory()
+            db = SystemSession()
+            try:
+                all_instructions = db.query(Instruction).all()
+                matched: List[str] = []
+                query_lower = query.lower()
+                for inst in all_instructions:
+                    inst_type = inst.type.value if hasattr(inst.type, "value") else str(inst.type)
+                    if inst_type == "global":
+                        matched.append(inst.text)
+                    elif inst_type == "topic" and inst.topic:
+                        if inst.topic.lower() in query_lower:
+                            matched.append(f"[Topic: {inst.topic}] {inst.text}")
+                return matched
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"Failed to fetch instructions (non-blocking): {e}")
+            return []
 
     def process_query(
         self,
@@ -84,6 +117,11 @@ class ChatOrchestrator:
             
             logger.info(f"Multi-query detection: requires_multi={requires_multi_query}, viz={multi_viz}")
 
+            # 2b. Fetch active instructions for prompt injection
+            instructions = self._fetch_instructions(query)
+            if instructions:
+                logger.info(f"Injecting {len(instructions)} instructions into SQL generation prompt")
+
             # 3. Se servono multiple query, genera ed esegui ciascuna
             if requires_multi_query and multi_viz.get("num_visualizations", 1) > 1:
                 return self._process_multi_query(
@@ -91,11 +129,12 @@ class ChatOrchestrator:
                     session_id=session_id,
                     multi_viz=multi_viz,
                     include_chart=include_chart,
-                    start_time=start_time
+                    start_time=start_time,
+                    instructions=instructions
                 )
 
             # 4. Single query flow (standard)
-            sql_result = self.vanna.generate_sql(query)
+            sql_result = self.vanna.generate_sql(query, instructions=instructions)
 
             if not sql_result["success"]:
                 return self._error_response(
@@ -241,7 +280,8 @@ class ChatOrchestrator:
         session_id: str,
         multi_viz: Dict[str, Any],
         include_chart: bool,
-        start_time: float
+        start_time: float,
+        instructions: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Processa richieste che richiedono MULTIPLE query SQL
@@ -263,7 +303,7 @@ class ChatOrchestrator:
             
             logger.info(f"Generating SQL for viz {i+1}: {viz_desc}")
             
-            sql_result = self.vanna.generate_sql(sub_query)
+            sql_result = self.vanna.generate_sql(sub_query, instructions=instructions)
             
             if not sql_result["success"]:
                 logger.warning(f"SQL generation failed for viz {i+1}: {sql_result.get('error')}")

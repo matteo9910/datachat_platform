@@ -206,7 +206,7 @@ class HybridVannaService:
     # SQL GENERATION (combina MCP schema + ChromaDB examples + LLM)
     # =========================================================================
     
-    def generate_sql(self, question: str, llm_provider: Optional[str] = None) -> Dict[str, Any]:
+    def generate_sql(self, question: str, llm_provider: Optional[str] = None, instructions: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Genera SQL con Chain-of-Thought reasoning strutturato.
         Usa il nuovo metodo che restituisce anche il ragionamento dettagliato.
@@ -214,23 +214,40 @@ class HybridVannaService:
         Args:
             question: Domanda NL
             llm_provider: Override provider (se None usa self.llm_provider)
+            instructions: Optional list of instruction texts to inject into the prompt
         """
         # Usa sempre il metodo con reasoning
-        return self.generate_sql_with_reasoning(question, llm_provider)
+        return self.generate_sql_with_reasoning(question, llm_provider, instructions=instructions)
 
-    def _build_messages_dynamic(self, question: str, schema: str) -> List[Dict]:
+    def _build_messages_dynamic(self, question: str, schema: str, instructions: Optional[List[str]] = None) -> List[Dict]:
         """
         Costruisce i messages per l'LLM con CHAIN-OF-THOUGHT strutturato.
         Il modello deve ragionare esplicitamente prima di generare SQL.
+        
+        Args:
+            question: User question
+            schema: Database schema DDL
+            instructions: Optional list of instruction texts to inject
         """
         
+        # Build instructions block if any are provided
+        instructions_block = ""
+        if instructions:
+            rules_text = "\n".join(f"- {inst}" for inst in instructions)
+            instructions_block = f"""
+
+=== SQL GENERATION RULES ===
+The following rules and guidelines MUST be followed when generating SQL:
+{rules_text}
+"""
+
         system_message = f"""You are a SQL expert for PostgreSQL databases. Your task is to analyze user questions and generate accurate SQL queries.
 
 === DATABASE SCHEMA ===
 The following is the ACTUAL schema of the connected database:
 
 {schema}
-
+{instructions_block}
 === YOUR TASK ===
 For each question, you MUST think step-by-step and provide your reasoning in a structured JSON format.
 
@@ -303,17 +320,22 @@ Example thought_process for "confronta i prezzi medi per categoria":
         
         return messages
     
-    def generate_sql_with_reasoning(self, question: str, llm_provider: Optional[str] = None) -> Dict[str, Any]:
+    def generate_sql_with_reasoning(self, question: str, llm_provider: Optional[str] = None, instructions: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Genera SQL con reasoning chain-of-thought strutturato.
         Restituisce sia la query che il ragionamento dettagliato.
+        
+        Args:
+            question: User NL question
+            llm_provider: Override provider
+            instructions: Optional instruction texts to inject into prompt
         """
         import json
         provider = llm_provider or self.llm_provider
         
         try:
             schema_ddl = self.get_schema_from_mcp()
-            messages = self._build_messages_dynamic(question, schema_ddl)
+            messages = self._build_messages_dynamic(question, schema_ddl, instructions=instructions)
             
             llm_manager = get_llm_provider_manager()
             result = llm_manager.complete(

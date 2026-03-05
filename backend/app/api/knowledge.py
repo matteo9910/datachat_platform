@@ -1,5 +1,6 @@
 ﻿"""
-Knowledge Base API router - CRUD for question-SQL pairs with ChromaDB training.
+Knowledge Base API router - CRUD for question-SQL pairs with ChromaDB training,
+and system instructions management.
 """
 
 import logging
@@ -11,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_system_db
-from app.models.system import KBPair, User
+from app.models.system import KBPair, Instruction, InstructionType, User
 from app.services.auth_middleware import require_role
 
 logger = logging.getLogger(__name__)
@@ -204,3 +205,192 @@ async def delete_pair(
     db.commit()
 
     return MessageResponse(message="KB pair deleted successfully")
+
+
+# ===========================================================================
+# INSTRUCTIONS SCHEMAS
+# ===========================================================================
+
+class InstructionCreate(BaseModel):
+    type: str  # "global" or "topic"
+    topic: Optional[str] = None
+    text: str
+
+
+class InstructionUpdate(BaseModel):
+    type: Optional[str] = None
+    topic: Optional[str] = None
+    text: Optional[str] = None
+
+
+class InstructionResponse(BaseModel):
+    id: str
+    type: str
+    topic: Optional[str] = None
+    text: str
+    created_by: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+# ===========================================================================
+# INSTRUCTIONS HELPERS
+# ===========================================================================
+
+def _instruction_to_response(inst: Instruction) -> InstructionResponse:
+    return InstructionResponse(
+        id=str(inst.id),
+        type=inst.type.value if hasattr(inst.type, "value") else str(inst.type),
+        topic=inst.topic,
+        text=inst.text,
+        created_by=str(inst.created_by) if inst.created_by else None,
+        created_at=inst.created_at.isoformat() if inst.created_at else None,
+        updated_at=inst.updated_at.isoformat() if inst.updated_at else None,
+    )
+
+
+def _validate_instruction_type(type_str: str) -> InstructionType:
+    """Validate and convert a type string to InstructionType enum."""
+    if type_str == "global":
+        return InstructionType.global_
+    elif type_str == "topic":
+        return InstructionType.topic
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid instruction type. Must be 'global' or 'topic'.",
+        )
+
+
+# ===========================================================================
+# INSTRUCTIONS ENDPOINTS
+# ===========================================================================
+
+@router.get("/instructions", response_model=List[InstructionResponse])
+async def list_instructions(
+    current_user: User = Depends(require_role(["admin", "analyst"])),
+    db: Session = Depends(get_system_db),
+):
+    """List all instructions (admin/analyst only)."""
+    instructions = db.query(Instruction).order_by(Instruction.created_at.desc()).all()
+    return [_instruction_to_response(i) for i in instructions]
+
+
+@router.post("/instructions", response_model=InstructionResponse, status_code=status.HTTP_201_CREATED)
+async def create_instruction(
+    body: InstructionCreate,
+    current_user: User = Depends(require_role(["admin", "analyst"])),
+    db: Session = Depends(get_system_db),
+):
+    """Create a new instruction."""
+    if not body.text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Instruction text cannot be empty",
+        )
+
+    inst_type = _validate_instruction_type(body.type)
+
+    # Topic is required when type is "topic"
+    if inst_type == InstructionType.topic:
+        if not body.topic or not body.topic.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Topic is required for topic-type instructions",
+            )
+
+    instruction = Instruction(
+        id=uuid_module.uuid4(),
+        type=inst_type,
+        topic=body.topic.strip() if body.topic else None,
+        text=body.text.strip(),
+        created_by=current_user.id,
+    )
+    db.add(instruction)
+    db.commit()
+    db.refresh(instruction)
+
+    return _instruction_to_response(instruction)
+
+
+@router.put("/instructions/{instruction_id}", response_model=InstructionResponse)
+async def update_instruction(
+    instruction_id: str,
+    body: InstructionUpdate,
+    current_user: User = Depends(require_role(["admin", "analyst"])),
+    db: Session = Depends(get_system_db),
+):
+    """Update an existing instruction."""
+    try:
+        uid = uuid_module.UUID(instruction_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Instruction not found",
+        )
+
+    instruction = db.query(Instruction).filter(Instruction.id == uid).first()
+    if not instruction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Instruction not found",
+        )
+
+    if body.type is not None:
+        instruction.type = _validate_instruction_type(body.type)
+
+    if body.topic is not None:
+        instruction.topic = body.topic.strip() if body.topic.strip() else None
+
+    if body.text is not None:
+        if not body.text.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Instruction text cannot be empty",
+            )
+        instruction.text = body.text.strip()
+
+    # Validate topic required for topic-type
+    effective_type = instruction.type
+    if hasattr(effective_type, "value"):
+        effective_type_val = effective_type.value
+    else:
+        effective_type_val = str(effective_type)
+    if effective_type_val == "topic" and not instruction.topic:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Topic is required for topic-type instructions",
+        )
+
+    db.commit()
+    db.refresh(instruction)
+
+    return _instruction_to_response(instruction)
+
+
+@router.delete("/instructions/{instruction_id}", response_model=MessageResponse)
+async def delete_instruction(
+    instruction_id: str,
+    current_user: User = Depends(require_role(["admin", "analyst"])),
+    db: Session = Depends(get_system_db),
+):
+    """Delete an instruction."""
+    try:
+        uid = uuid_module.UUID(instruction_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Instruction not found",
+        )
+
+    instruction = db.query(Instruction).filter(Instruction.id == uid).first()
+    if not instruction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Instruction not found",
+        )
+
+    db.delete(instruction)
+    db.commit()
+
+    return MessageResponse(message="Instruction deleted successfully")
