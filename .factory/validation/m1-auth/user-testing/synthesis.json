@@ -1,0 +1,54 @@
+﻿{
+  "milestone": "m1-auth",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 22,
+    "passed": 3,
+    "failed": 0,
+    "blocked": 19
+  },
+  "passedAssertions": [
+    "VAL-AUTH-001",
+    "VAL-AUTH-005",
+    "VAL-AUTH-012"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    { "id": "VAL-AUTH-002", "blockedBy": "System DB (Neon) placeholder URL - auth endpoints return 500" },
+    { "id": "VAL-AUTH-003", "blockedBy": "System DB (Neon) placeholder URL - auth endpoints return 500" },
+    { "id": "VAL-AUTH-004", "blockedBy": "System DB (Neon) placeholder URL - cannot login to test logout" },
+    { "id": "VAL-AUTH-006", "blockedBy": "System DB (Neon) placeholder URL - cannot login to verify role-gated sidebar" },
+    { "id": "VAL-AUTH-007", "blockedBy": "System DB (Neon) placeholder URL - cannot login as admin to create users" },
+    { "id": "VAL-AUTH-008", "blockedBy": "System DB (Neon) placeholder URL - cannot login as admin to edit user roles" },
+    { "id": "VAL-AUTH-009", "blockedBy": "System DB (Neon) placeholder URL - cannot test disable/enable account flow" },
+    { "id": "VAL-AUTH-010", "blockedBy": "System DB (Neon) placeholder URL - seed admin creation fails on startup" },
+    { "id": "VAL-AUTH-011", "blockedBy": "System DB (Neon) placeholder URL - cannot login to test session persistence" },
+    { "id": "VAL-AUTH-013", "blockedBy": "System DB (Neon) placeholder URL - cannot create role-specific users to test 403" },
+    { "id": "VAL-AUTH-014", "blockedBy": "System DB (Neon) placeholder URL - cannot login to test JWT expiry" },
+    { "id": "VAL-AUTH-015", "blockedBy": "System DB (Neon) placeholder URL - cannot login as admin to test self-disable prevention" },
+    { "id": "VAL-AUTH-016", "blockedBy": "System DB (Neon) placeholder URL - cannot login as admin to test duplicate email rejection" },
+    { "id": "VAL-AGNOSTIC-001", "blockedBy": "System DB (Neon) placeholder URL - cannot verify system table isolation" },
+    { "id": "VAL-AGNOSTIC-002", "blockedBy": "System DB (Neon) placeholder URL - cannot access Setup Wizard (requires auth)" },
+    { "id": "VAL-AGNOSTIC-006", "blockedBy": "System DB (Neon) placeholder URL - cannot access Setup Wizard (requires auth)" },
+    { "id": "VAL-CROSS-003", "blockedBy": "System DB (Neon) placeholder URL - cannot login to test auth-gated feature access" },
+    { "id": "VAL-CROSS-008", "blockedBy": "System DB (Neon) placeholder URL - cannot test first-run full flow" },
+    { "id": "VAL-CROSS-009", "blockedBy": "System DB (Neon) placeholder URL - cannot test Setup Wizard behind auth" },
+    { "id": "VAL-CROSS-012", "blockedBy": "System DB (Neon) placeholder URL - cannot test logout/re-login data persistence" }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added system DB placeholder issue documentation, Flow Validator Guidance for Web UI and API surfaces, service startup instructions",
+      "source": "setup"
+    }
+  ],
+  "codeQualityValidation": {
+    "backendTests": "97 passed, 0 failed (test_auth.py, test_admin_users.py, test_system_db.py)",
+    "frontendTypecheck": "tsc --noEmit passed clean",
+    "frontendBuild": "npm run build succeeded",
+    "note": "All auth code logic verified correct via unit tests. Blocker is purely environmental."
+  },
+  "rootCause": "SYSTEM_DATABASE_URL in .env is a placeholder Neon connection. Fix: configure real Neon PostgreSQL URL and run Alembic migrations.",
+  "previousRound": null
+}

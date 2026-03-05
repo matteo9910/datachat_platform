@@ -1,0 +1,39 @@
+﻿{
+  "flowId": "ui-auth-flow",
+  "testedAt": "2026-03-05T11:30:00Z",
+  "assertions": {
+    "VAL-AUTH-001": {
+      "status": "pass",
+      "evidence": "Navigated to http://localhost:5173/ without any session/JWT. The login page was displayed with Sign In heading, Email field (placeholder: admin@datachat.ai), Password field, and SIGN IN button. No other app content (sidebar, chat, dashboard, etc.) was visible. Page title: DataChat BI Platform. No console errors detected.",
+      "screenshots": ["val-auth-001-login-page.png"],
+      "steps": [
+        { "action": "Navigate to http://localhost:5173/", "expected": "Login form displayed, no other content visible", "observed": "Login form displayed with Email, Password fields and Sign In button. No other app content visible." },
+        { "action": "Check console errors", "expected": "No errors", "observed": "No console errors" }
+      ]
+    },
+    "VAL-AUTH-005": {
+      "status": "pass",
+      "evidence": "Navigated to 5 protected routes (/chat, /dashboard, /charts, /settings, /knowledge-base) without a valid JWT. All routes displayed the login form (Email, Password, Sign In button) instead of the protected content. The URL stays on the requested path but the login page is rendered. No protected content was visible on any route. No console errors detected.",
+      "screenshots": ["val-auth-005-chat-redirect.png", "val-auth-005-settings-redirect.png"],
+      "steps": [
+        { "action": "Navigate to http://localhost:5173/chat", "expected": "Redirect to login / login page displayed", "observed": "Login form displayed. URL: /chat. No chat content visible." },
+        { "action": "Navigate to http://localhost:5173/dashboard", "expected": "Redirect to login / login page displayed", "observed": "Login form displayed. URL: /dashboard. No dashboard content visible." },
+        { "action": "Navigate to http://localhost:5173/charts", "expected": "Redirect to login / login page displayed", "observed": "Login form displayed. URL: /charts. No charts content visible." },
+        { "action": "Navigate to http://localhost:5173/settings", "expected": "Redirect to login / login page displayed", "observed": "Login form displayed. URL: /settings. No settings content visible." },
+        { "action": "Navigate to http://localhost:5173/knowledge-base", "expected": "Redirect to login / login page displayed", "observed": "Login form displayed. URL: /knowledge-base. No KB content visible." },
+        { "action": "Check console errors across all routes", "expected": "No errors", "observed": "No console errors on any route" }
+      ]
+    }
+  },
+  "frictions": [
+    {
+      "description": "The SPA router does not perform a URL redirect to /login when accessing protected routes without auth. Instead, the login component renders in-place at the requested URL (e.g., /chat shows login form but URL stays /chat). This is functionally correct - unauthenticated users cannot see protected content - but differs from a strict HTTP redirect pattern.",
+      "resolved": true,
+      "resolution": "Accepted as valid behavior. The login page is displayed and no protected content is accessible.",
+      "affectedAssertions": ["VAL-AUTH-005"]
+    }
+  ],
+  "blockers": [],
+  "toolsUsed": ["agent-browser"],
+  "summary": "Tested 2 assertions: 2 passed. VAL-AUTH-001: Login page correctly displays on unauthenticated access. VAL-AUTH-005: All 5 tested protected routes display the login form when accessed without authentication."
+}

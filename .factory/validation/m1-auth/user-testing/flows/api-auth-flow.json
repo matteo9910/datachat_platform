@@ -1,0 +1,84 @@
+{
+  "flowId": "api-auth-flow",
+  "testedAt": "2026-03-05T11:23:00Z",
+  "assertions": {
+    "VAL-AUTH-012": {
+      "status": "pass",
+      "evidence": "All protected API endpoints return 401 without valid JWT. Tested 6 scenarios: (1) GET /api/admin/users without auth -> 401 Not authenticated, (2) POST /api/admin/users without auth -> 401 Not authenticated, (3) GET /api/admin/users/some-id without auth -> 401 Not authenticated, (4) GET /api/admin/users with garbage JWT -> 401 Invalid or expired token, (5) GET /api/admin/users with malformed auth header -> 401 Not authenticated, (6) POST /api/admin/users with garbage JWT -> 401 Invalid or expired token. Health endpoint confirmed accessible at 200.",
+      "details": {
+        "healthCheck": {
+          "method": "GET",
+          "url": "http://localhost:8000/health",
+          "statusCode": 200,
+          "body": "{\"status\":\"healthy\",\"service\":\"datachat-bi-platform\",\"version\":\"0.5.0\"}"
+        },
+        "tests": [
+          {
+            "description": "GET /api/admin/users without Authorization header",
+            "method": "GET",
+            "url": "http://localhost:8000/api/admin/users",
+            "authHeader": null,
+            "expectedStatus": 401,
+            "actualStatus": 401,
+            "responseBody": "{\"detail\":\"Not authenticated\"}",
+            "pass": true
+          },
+          {
+            "description": "POST /api/admin/users without Authorization header",
+            "method": "POST",
+            "url": "http://localhost:8000/api/admin/users",
+            "authHeader": null,
+            "expectedStatus": 401,
+            "actualStatus": 401,
+            "responseBody": "{\"detail\":\"Not authenticated\"}",
+            "pass": true
+          },
+          {
+            "description": "GET /api/admin/users/some-id without Authorization header",
+            "method": "GET",
+            "url": "http://localhost:8000/api/admin/users/some-id",
+            "authHeader": null,
+            "expectedStatus": 401,
+            "actualStatus": 401,
+            "responseBody": "{\"detail\":\"Not authenticated\"}",
+            "pass": true
+          },
+          {
+            "description": "GET /api/admin/users with garbage JWT token",
+            "method": "GET",
+            "url": "http://localhost:8000/api/admin/users",
+            "authHeader": "Bearer garbage.invalid.token123",
+            "expectedStatus": 401,
+            "actualStatus": 401,
+            "responseBody": "{\"detail\":\"Invalid or expired token\"}",
+            "pass": true
+          },
+          {
+            "description": "GET /api/admin/users with malformed auth header (not Bearer scheme)",
+            "method": "GET",
+            "url": "http://localhost:8000/api/admin/users",
+            "authHeader": "NotBearer something",
+            "expectedStatus": 401,
+            "actualStatus": 401,
+            "responseBody": "{\"detail\":\"Not authenticated\"}",
+            "pass": true
+          },
+          {
+            "description": "POST /api/admin/users with garbage JWT token",
+            "method": "POST",
+            "url": "http://localhost:8000/api/admin/users",
+            "authHeader": "Bearer totally.not.a.valid.jwt.token",
+            "expectedStatus": 401,
+            "actualStatus": 401,
+            "responseBody": "{\"detail\":\"Invalid or expired token\"}",
+            "pass": true
+          }
+        ]
+      }
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["Invoke-WebRequest"],
+  "summary": "Tested 1 assertion (VAL-AUTH-012) across 6 API request scenarios: all passed. Protected endpoints correctly return 401 for missing auth, garbage JWT, and malformed auth headers. The middleware rejects unauthenticated requests before hitting the database."
+}
