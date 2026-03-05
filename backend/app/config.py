@@ -17,10 +17,13 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    # Database
+    # Client Database (customer's business data - any PostgreSQL)
     database_url: str = "postgresql://datachat_user:AIEngineeringPOC@localhost:5432/datachat_db"
     database_pool_size: int = 10
     database_max_overflow: int = 20
+
+    # System Database (Neon PostgreSQL - application metadata: auth, audit, config)
+    system_database_url: str | None = None
 
     # LLM Provider
     default_llm_provider: Literal["claude", "azure", "gpt52"] = "claude"
