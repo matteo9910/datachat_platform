@@ -55,6 +55,30 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"LLM Provider initialization failed: {e}")
 
+    # Run Alembic migrations on startup (if SYSTEM_DATABASE_URL is configured)
+    try:
+        if settings.system_database_url:
+            import os
+            from alembic.config import Config as AlembicConfig
+            from alembic import command as alembic_command
+            alembic_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic")
+            alembic_ini = os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic.ini")
+            if os.path.exists(alembic_ini):
+                alembic_cfg = AlembicConfig(alembic_ini)
+                alembic_cfg.set_main_option("script_location", alembic_dir)
+                alembic_cfg.set_main_option(
+                    "sqlalchemy.url",
+                    settings.system_database_url.replace("%", "%%"),
+                )
+                alembic_command.upgrade(alembic_cfg, "head")
+                logger.info("Alembic migrations applied successfully")
+            else:
+                logger.warning("alembic.ini not found — skipping auto-migration")
+        else:
+            logger.info("SYSTEM_DATABASE_URL not configured — skipping auto-migration")
+    except Exception as e:
+        logger.error(f"Alembic auto-migration failed: {e}")
+
     # Seed admin account on startup (if users table is empty)
     try:
         if settings.system_database_url:
