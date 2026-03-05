@@ -134,6 +134,10 @@ app.include_router(write_router)
 from app.api.speech import router as speech_router
 app.include_router(speech_router)
 
+# Include Dashboard Router
+from app.api.dashboard import router as dashboard_router
+app.include_router(dashboard_router)
+
 
 # ============================================================
 # MODELS
