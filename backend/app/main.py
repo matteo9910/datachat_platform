@@ -126,6 +126,10 @@ app.include_router(views_router)
 from app.api.brand import router as brand_router
 app.include_router(brand_router)
 
+# Include Write Operations Router
+from app.api.write import router as write_router
+app.include_router(write_router)
+
 
 # ============================================================
 # MODELS
