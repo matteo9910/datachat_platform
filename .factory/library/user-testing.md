@@ -23,10 +23,10 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - **Browser DevTools**: For network inspection, console errors, SSE streaming verification
 
 ## Test Accounts (created and verified)
-- **Admin:** email=`admin@datachat.local`, password=`DataChat2026!Admin`, role=admin (seed account, auto-created on first run)
-- **Analyst:** email=`analyst1@test.local`, password=`TestAnalyst123!`, role=analyst (created via admin API)
-- **User 1:** email=`user1@test.local`, password=`TestUser123!`, role=user (created via admin API)
-- **User 2:** email=`user2@test.local`, password=`TestUser2_123!`, role=user (created via admin API, for disable/enable testing)
+- **Admin:** email=`admin@datachat.local`, password=`<set via SEED_ADMIN_PASSWORD env var>`, role=admin (seed account, auto-created on first run)
+- **Analyst:** email=`analyst1@test.local`, password=`<set via admin API>`, role=analyst (created via admin API)
+- **User 1:** email=`user1@test.local`, password=`<set via admin API>`, role=user (created via admin API)
+- **User 2:** email=`user2@test.local`, password=`<set via admin API>`, role=user (created via admin API, for disable/enable testing)
 
 ## Setup Steps for Testing
 1. Ensure backend is running (port 8000)
