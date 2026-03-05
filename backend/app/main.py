@@ -54,7 +54,23 @@ async def lifespan(app: FastAPI):
         logger.info(f"LLM Providers available: {llm_manager.list_available_providers()}")
     except Exception as e:
         logger.error(f"LLM Provider initialization failed: {e}")
-    
+
+    # Seed admin account on startup (if users table is empty)
+    try:
+        if settings.system_database_url:
+            from app.database import get_system_session_factory
+            from app.services.auth_service import seed_admin_user
+            SessionFactory = get_system_session_factory()
+            db = SessionFactory()
+            try:
+                seed_admin_user(db)
+            finally:
+                db.close()
+        else:
+            logger.info("SYSTEM_DATABASE_URL not configured — skipping seed admin")
+    except Exception as e:
+        logger.error(f"Seed admin creation failed: {e}")
+
     yield
     
     logger.info("=== SHUTDOWN ===")
@@ -89,6 +105,14 @@ app.include_router(charts_router)
 # Include Database Router
 from app.api.database import router as database_router
 app.include_router(database_router)
+
+# Include Auth Router
+from app.api.auth import router as auth_router
+app.include_router(auth_router)
+
+# Include Admin Router
+from app.api.admin import router as admin_router
+app.include_router(admin_router)
 
 
 # ============================================================

@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     api_workers: int = 1
     cors_origins: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174"
 
+    # Authentication / JWT
+    secret_key: str = "change-me-generate-with-openssl-rand-hex-32"
+    seed_admin_password: str | None = None
+    jwt_expiry_hours: int = 24
+
     # Logging
     log_level: str = "INFO"
     log_format: Literal["json", "text"] = "text"
