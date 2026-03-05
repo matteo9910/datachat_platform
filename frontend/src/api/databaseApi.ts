@@ -57,6 +57,7 @@ export interface TableInfo {
   schema_name: string;
   row_count?: number;
   columns: TableColumn[];
+  type?: 'table' | 'view';
 }
 
 export interface SchemaResponse {

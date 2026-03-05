@@ -9,6 +9,7 @@ import { Icons } from '../Layout/Icons';
 import { Toast, useToast } from '../ui/toast';
 import { ConfirmModal } from '../ui/modal';
 import SaveToKBButton from '../Knowledge/SaveToKBButton';
+import SaveAsViewButton from './SaveAsViewButton';
 
 // Component for saved thinking step in completed messages
 const SavedThinkingStepItem: React.FC<{ step: ThinkingStep; index: number }> = ({ step, index }) => {
@@ -483,7 +484,12 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({ msg, userQuestion, 
              <div>
                <div className="flex items-center justify-between mb-3">
                  <h3 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Query SQL Generata</h3>
-                 {msg.sql && <SaveToKBButton question={userQuestion || ''} sql={msg.sql} />}
+                 {msg.sql && (
+                   <div className="flex items-center gap-1">
+                     <SaveToKBButton question={userQuestion || ''} sql={msg.sql} />
+                     <SaveAsViewButton sql={msg.sql} />
+                   </div>
+                 )}
                </div>
                <div className="bg-slate-900 rounded-xl p-5 font-mono text-xs leading-relaxed text-slate-100 overflow-x-auto relative">
                  <button

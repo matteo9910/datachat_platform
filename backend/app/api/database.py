@@ -112,6 +112,7 @@ class TableInfo(BaseModel):
     schema_name: str = "public"
     row_count: Optional[int] = None
     columns: List[Dict[str, Any]] = []
+    type: str = "table"  # "table" or "view"
 
 
 class SchemaResponse(BaseModel):
@@ -963,7 +964,35 @@ async def get_database_schema():
                     
                     tables.append(TableInfo(name=table_name, row_count=row_count, columns=columns))
                 
-                logger.info(f"Schema loaded: {len(tables)} tables")
+                # Also load views
+                cur.execute("SELECT table_name FROM information_schema.views WHERE table_schema = 'public' ORDER BY table_name")
+                views_list = [row["table_name"] for row in cur.fetchall()]
+                
+                for view_name in views_list:
+                    view_columns_sql = f"""
+                        SELECT 
+                            c.column_name, c.data_type, c.is_nullable
+                        FROM information_schema.columns c
+                        WHERE c.table_name = '{view_name}' AND c.table_schema = 'public'
+                        ORDER BY c.ordinal_position
+                    """
+                    cur.execute(view_columns_sql)
+                    view_columns_result = [dict(row) for row in cur.fetchall()]
+                    
+                    view_columns = []
+                    for col in view_columns_result:
+                        view_columns.append({
+                            "name": col.get("column_name"),
+                            "type": col.get("data_type", "").upper(),
+                            "nullable": col.get("is_nullable") == "YES",
+                            "isPK": False,
+                            "isFK": False,
+                            "fkReferences": None
+                        })
+                    
+                    tables.append(TableInfo(name=view_name, row_count=None, columns=view_columns, type="view"))
+                
+                logger.info(f"Schema loaded: {len(tables)} items ({len(tables_list)} tables, {len(views_list)} views)")
                 return SchemaResponse(database=db_name, tables=tables)
         finally:
             conn.close()

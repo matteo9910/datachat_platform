@@ -118,6 +118,10 @@ app.include_router(admin_router)
 from app.api.knowledge import router as knowledge_router
 app.include_router(knowledge_router)
 
+# Include Views Router
+from app.api.views import router as views_router
+app.include_router(views_router)
+
 
 # ============================================================
 # MODELS

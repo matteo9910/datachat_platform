@@ -126,7 +126,11 @@ const DatabaseSchema: React.FC = () => {
     }
   }, [activeView]);
 
-  const getTableType = (tableName: string): 'fact' | 'dimension' | 'other' => {
+  const getTableType = (tableName: string, tableInfo?: TableInfo): 'fact' | 'dimension' | 'view' | 'other' => {
+    // Check if it's a view based on API type field
+    if (tableInfo?.type === 'view') return 'view';
+    const match = schema?.tables.find(t => t.name === tableName);
+    if (match?.type === 'view') return 'view';
     if (tableName.startsWith('fact_')) return 'fact';
     if (tableName.startsWith('dim_')) return 'dimension';
     return 'other';
@@ -142,9 +146,10 @@ const DatabaseSchema: React.FC = () => {
     const startX = 40;
     const startY = 40;
     
-    const factTables = tables.filter(t => getTableType(t.name) === 'fact');
-    const dimTables = tables.filter(t => getTableType(t.name) === 'dimension');
-    const otherTables = tables.filter(t => getTableType(t.name) === 'other');
+    const factTables = tables.filter(t => getTableType(t.name, t) === 'fact');
+    const dimTables = tables.filter(t => getTableType(t.name, t) === 'dimension');
+    const viewTables = tables.filter(t => getTableType(t.name, t) === 'view');
+    const otherTables = tables.filter(t => getTableType(t.name, t) === 'other');
     
     // Calculate columns based on available width
     const cols = 4;
@@ -170,8 +175,18 @@ const DatabaseSchema: React.FC = () => {
     const dimRows = Math.ceil(dimTables.length / cols);
     currentRow += dimRows;
     
-    // Place other tables at the bottom
+    // Place other tables
     otherTables.forEach((table, i) => {
+      positions[table.name] = {
+        x: startX + (i % cols) * (tableWidth + gapX),
+        y: startY + currentRow * (tableHeight + gapY) + (Math.floor(i / cols) * (tableHeight + gapY))
+      };
+    });
+    const otherRows = Math.ceil(otherTables.length / cols);
+    currentRow += otherRows;
+    
+    // Place views at the bottom
+    viewTables.forEach((table, i) => {
       positions[table.name] = {
         x: startX + (i % cols) * (tableWidth + gapX),
         y: startY + currentRow * (tableHeight + gapY) + (Math.floor(i / cols) * (tableHeight + gapY))
@@ -355,7 +370,8 @@ const DatabaseSchema: React.FC = () => {
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Struttura Database</h2>
           <p className="text-slate-500 text-sm mt-1">
-            Database: <span className="font-bold text-orange-600">{connectionStatus?.active_database || schema?.database}</span> • {schema?.tables.length || 0} tabelle
+            Database: <span className="font-bold text-orange-600">{connectionStatus?.active_database || schema?.database}</span> • {schema?.tables.filter(t => t.type !== 'view').length || 0} tabelle
+            {(schema?.tables.filter(t => t.type === 'view').length || 0) > 0 && <span className="ml-1">• {schema?.tables.filter(t => t.type === 'view').length} viste</span>}
             {relationships.length > 0 && <span className="ml-2">• {relationships.length} relazioni</span>}
           </p>
         </div>
@@ -482,7 +498,7 @@ const DatabaseSchema: React.FC = () => {
               {schema?.tables.map((table) => {
                 const pos = tablePositions[table.name];
                 if (!pos) return null;
-                const type = getTableType(table.name);
+                const type = getTableType(table.name, table);
                 
                 return (
                   <DraggableTableNode
@@ -511,12 +527,14 @@ const DatabaseSchema: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className={`w-2.5 h-2.5 rounded-full ${
                         getTableType(selectedTable) === 'fact' ? 'bg-orange-500' :
-                        getTableType(selectedTable) === 'dimension' ? 'bg-blue-500' : 'bg-slate-400'
+                        getTableType(selectedTable) === 'dimension' ? 'bg-blue-500' :
+                        getTableType(selectedTable) === 'view' ? 'bg-purple-500' : 'bg-slate-400'
                       }`}></div>
                       <span className="text-sm font-bold text-slate-900">{selectedTable.toUpperCase()}</span>
                       <span className="text-[10px] text-slate-400 font-medium">
                         {getTableType(selectedTable) === 'fact' ? 'Fact' :
-                         getTableType(selectedTable) === 'dimension' ? 'Dim' : ''}
+                         getTableType(selectedTable) === 'dimension' ? 'Dim' :
+                         getTableType(selectedTable) === 'view' ? 'View' : ''}
                       </span>
                     </div>
                     <svg className={`w-5 h-5 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -527,12 +545,12 @@ const DatabaseSchema: React.FC = () => {
                   {isDropdownOpen && (
                     <div className="absolute z-50 mt-2 w-full lg:w-96 bg-white border-2 border-slate-200 rounded-xl shadow-xl overflow-hidden">
                       <div className="max-h-72 overflow-y-auto">
-                        {(schema?.tables.filter(t => getTableType(t.name) === 'fact').length ?? 0) > 0 && (
+                        {(schema?.tables.filter(t => getTableType(t.name, t) === 'fact').length ?? 0) > 0 && (
                           <div>
                             <div className="px-4 py-2 bg-orange-50 border-b border-orange-100 sticky top-0">
                               <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Fact Tables</span>
                             </div>
-                            {schema?.tables.filter(t => getTableType(t.name) === 'fact')?.map(t => (
+                            {schema?.tables.filter(t => getTableType(t.name, t) === 'fact')?.map(t => (
                               <button key={t.name} onClick={() => { setSelectedTable(t.name); setIsDropdownOpen(false); }}
                                 className={`w-full flex items-center justify-between px-4 py-3 hover:bg-orange-50 transition-colors ${selectedTable === t.name ? 'bg-orange-50' : ''}`}>
                                 <div className="flex items-center gap-3">
@@ -544,12 +562,12 @@ const DatabaseSchema: React.FC = () => {
                             ))}
                           </div>
                         )}
-                        {(schema?.tables.filter(t => getTableType(t.name) === 'dimension').length ?? 0) > 0 && (
+                        {(schema?.tables.filter(t => getTableType(t.name, t) === 'dimension').length ?? 0) > 0 && (
                           <div>
                             <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 sticky top-0">
                               <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Dimensions</span>
                             </div>
-                            {schema?.tables.filter(t => getTableType(t.name) === 'dimension')?.map(t => (
+                            {schema?.tables.filter(t => getTableType(t.name, t) === 'dimension')?.map(t => (
                               <button key={t.name} onClick={() => { setSelectedTable(t.name); setIsDropdownOpen(false); }}
                                 className={`w-full flex items-center justify-between px-4 py-3 hover:bg-blue-50 transition-colors ${selectedTable === t.name ? 'bg-blue-50' : ''}`}>
                                 <div className="flex items-center gap-3">
@@ -561,12 +579,12 @@ const DatabaseSchema: React.FC = () => {
                             ))}
                           </div>
                         )}
-                        {(schema?.tables.filter(t => getTableType(t.name) === 'other').length ?? 0) > 0 && (
+                        {(schema?.tables.filter(t => getTableType(t.name, t) === 'other').length ?? 0) > 0 && (
                           <div>
                             <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 sticky top-0">
                               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Other Tables</span>
                             </div>
-                            {schema?.tables.filter(t => getTableType(t.name) === 'other')?.map(t => (
+                            {schema?.tables.filter(t => getTableType(t.name, t) === 'other')?.map(t => (
                               <button key={t.name} onClick={() => { setSelectedTable(t.name); setIsDropdownOpen(false); }}
                                 className={`w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors ${selectedTable === t.name ? 'bg-slate-100' : ''}`}>
                                 <div className="flex items-center gap-3">
@@ -574,6 +592,24 @@ const DatabaseSchema: React.FC = () => {
                                   <span className="text-sm font-bold text-slate-700">{t.name.toUpperCase()}</span>
                                 </div>
                                 <span className="text-[10px] text-slate-400">{t.row_count?.toLocaleString()}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {(schema?.tables.filter(t => getTableType(t.name, t) === 'view').length ?? 0) > 0 && (
+                          <div>
+                            <div className="px-4 py-2 bg-purple-50 border-b border-purple-100 sticky top-0">
+                              <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Views</span>
+                            </div>
+                            {schema?.tables.filter(t => getTableType(t.name, t) === 'view')?.map(t => (
+                              <button key={t.name} onClick={() => { setSelectedTable(t.name); setIsDropdownOpen(false); }}
+                                className={`w-full flex items-center justify-between px-4 py-3 hover:bg-purple-50 transition-colors ${selectedTable === t.name ? 'bg-purple-50' : ''}`}>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                  <span className="text-sm font-bold text-slate-700">{t.name.toUpperCase()}</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded font-bold">VIEW</span>
+                                </div>
+                                <span className="text-[10px] text-slate-400">{t.row_count?.toLocaleString() ?? '—'}</span>
                               </button>
                             ))}
                           </div>
@@ -840,14 +876,14 @@ const DatabaseSchema: React.FC = () => {
 // Draggable Table Node for Canvas
 interface DraggableTableNodeProps {
   table: TableInfo;
-  type: 'fact' | 'dimension' | 'other';
+  type: 'fact' | 'dimension' | 'view' | 'other';
   position: TablePosition;
   isDragging: boolean;
   onMouseDown: (e: React.MouseEvent) => void;
 }
 
 const DraggableTableNode: React.FC<DraggableTableNodeProps> = ({ table, type, position, isDragging, onMouseDown }) => {
-  const headerColor = type === 'fact' ? 'bg-orange-600' : type === 'dimension' ? 'bg-slate-700' : 'bg-slate-500';
+  const headerColor = type === 'fact' ? 'bg-orange-600' : type === 'dimension' ? 'bg-slate-700' : type === 'view' ? 'bg-purple-600' : 'bg-slate-500';
 
   return (
     <div
@@ -862,8 +898,11 @@ const DraggableTableNode: React.FC<DraggableTableNodeProps> = ({ table, type, po
     >
       {/* Header */}
       <div className={`${headerColor} px-4 py-2.5 flex items-center justify-between`}>
-        <span className="text-[10px] font-black text-white uppercase tracking-widest truncate">{table.name}</span>
-        <span className="text-[9px] text-white/70 font-bold">{table.row_count?.toLocaleString()}</span>
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          {type === 'view' && <span className="text-[8px] bg-white/20 text-white px-1.5 py-0.5 rounded font-bold shrink-0">VIEW</span>}
+          <span className="text-[10px] font-black text-white uppercase tracking-widest truncate">{table.name}</span>
+        </div>
+        <span className="text-[9px] text-white/70 font-bold shrink-0 ml-1">{table.row_count?.toLocaleString() ?? '—'}</span>
       </div>
       
       {/* Columns */}
