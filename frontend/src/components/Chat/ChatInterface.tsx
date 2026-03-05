@@ -8,6 +8,7 @@ import ChartViewer from '../Charts/ChartViewer';
 import { Icons } from '../Layout/Icons';
 import { Toast, useToast } from '../ui/toast';
 import { ConfirmModal } from '../ui/modal';
+import SaveToKBButton from '../Knowledge/SaveToKBButton';
 
 // Component for saved thinking step in completed messages
 const SavedThinkingStepItem: React.FC<{ step: ThinkingStep; index: number }> = ({ step, index }) => {
@@ -86,6 +87,7 @@ const SavedThinkingStepItem: React.FC<{ step: ThinkingStep; index: number }> = (
 
 interface AssistantMessageProps {
   msg: ChatMessage;
+  userQuestion?: string;
   onSave: (msg: ChatMessage) => void;
   onSaveSingleChart: (msg: ChatMessage, chartIndex: number) => void;
   onSaveAllCharts: (msg: ChatMessage) => void;
@@ -95,7 +97,7 @@ interface AssistantMessageProps {
   modifyingChartIndex?: number | null;
 }
 
-const AssistantMessage: React.FC<AssistantMessageProps> = ({ msg, onSave, onSaveSingleChart, onSaveAllCharts, onModifyChart, onModifySingleChart, modifyingMessageId, modifyingChartIndex }) => {
+const AssistantMessage: React.FC<AssistantMessageProps> = ({ msg, userQuestion, onSave, onSaveSingleChart, onSaveAllCharts, onModifyChart, onModifySingleChart, modifyingMessageId, modifyingChartIndex }) => {
   const [activePage, setActivePage] = useState<'insights' | 'sql'>('insights');
   const [copied, setCopied] = useState(false);
   const [showModifyPanel, setShowModifyPanel] = useState(false);
@@ -479,7 +481,10 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({ msg, onSave, onSave
         ) : (
           <div className="space-y-6">
              <div>
-               <h3 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mb-3">Query SQL Generata</h3>
+               <div className="flex items-center justify-between mb-3">
+                 <h3 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Query SQL Generata</h3>
+                 {msg.sql && <SaveToKBButton question={userQuestion || ''} sql={msg.sql} />}
+               </div>
                <div className="bg-slate-900 rounded-xl p-5 font-mono text-xs leading-relaxed text-slate-100 overflow-x-auto relative">
                  <button
                    onClick={handleCopySQL}
@@ -1070,7 +1075,12 @@ const ChatInterface: React.FC = () => {
               <p className="text-xs text-slate-400 mt-2">Es: "Vendite totali per regione"</p>
             </div>
           )}
-          {currentSession?.messages.map((msg) => (
+          {currentSession?.messages.map((msg, idx) => {
+            // Find the preceding user message for SaveToKB context
+            const prevUserMsg = msg.role === 'assistant'
+              ? currentSession.messages.slice(0, idx).reverse().find(m => m.role === 'user')
+              : undefined;
+            return (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'user' ? (
                 <div className="bg-slate-900 text-white px-5 py-3 rounded-2xl rounded-tr-none shadow-lg shadow-slate-200 max-w-[85%]">
@@ -1078,7 +1088,8 @@ const ChatInterface: React.FC = () => {
                 </div>
               ) : (
                 <AssistantMessage 
-                  msg={msg} 
+                  msg={msg}
+                  userQuestion={prevUserMsg?.text}
                   onSave={handleSaveChart} 
                   onSaveSingleChart={handleSaveSingleChart}
                   onSaveAllCharts={handleSaveAllCharts}
@@ -1089,7 +1100,8 @@ const ChatInterface: React.FC = () => {
                 />
               )}
             </div>
-          ))}
+            );
+          })}
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm w-full max-w-[95%] overflow-hidden">

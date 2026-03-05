@@ -114,6 +114,10 @@ app.include_router(auth_router)
 from app.api.admin import router as admin_router
 app.include_router(admin_router)
 
+# Include Knowledge Base Router
+from app.api.knowledge import router as knowledge_router
+app.include_router(knowledge_router)
+
 
 # ============================================================
 # MODELS
