@@ -129,6 +129,7 @@ class BrandConfig(SystemBase):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid_module.uuid4)
     primary_color = Column(String(7), nullable=True)
     secondary_color = Column(String(7), nullable=True)
+    accent_colors = Column(JSONB, nullable=True)  # JSON array of hex color strings
     font_family = Column(String(100), nullable=True)
     logo_url = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -122,6 +122,10 @@ app.include_router(knowledge_router)
 from app.api.views import router as views_router
 app.include_router(views_router)
 
+# Include Brand Config Router
+from app.api.brand import router as brand_router
+app.include_router(brand_router)
+
 
 # ============================================================
 # MODELS

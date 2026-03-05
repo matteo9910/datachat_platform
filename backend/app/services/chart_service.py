@@ -393,13 +393,93 @@ Rispondi SOLO con un JSON valido:
             }
 
 
+def get_brand_colors_and_font() -> Dict[str, Any]:
+    """
+    Fetch brand config from system DB. Returns color sequence and font family.
+    Falls back to Plotly defaults if no brand config is saved or DB is unavailable.
+    """
+    default = {
+        "colors": [
+            "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+            "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+        ],
+        "font_family": None,  # None means use Plotly/ChartViewer defaults
+    }
+    try:
+        from app.database import get_system_session_factory
+        from app.models.system import BrandConfig
+        SessionFactory = get_system_session_factory()
+        db = SessionFactory()
+        try:
+            cfg = db.query(BrandConfig).first()
+            if cfg is None:
+                return default
+            # Build color sequence: primary, secondary, then accent colors
+            colors = []
+            if cfg.primary_color:
+                colors.append(cfg.primary_color)
+            if cfg.secondary_color:
+                colors.append(cfg.secondary_color)
+            if cfg.accent_colors and isinstance(cfg.accent_colors, list):
+                colors.extend(cfg.accent_colors)
+            # Pad with defaults if too few colors
+            if len(colors) < 3:
+                return default
+            return {
+                "colors": colors,
+                "font_family": cfg.font_family or None,
+            }
+        finally:
+            db.close()
+    except Exception as e:
+        logger.debug(f"Could not fetch brand config (using defaults): {e}")
+        return default
+
+
 class PlotlyConfigGenerator:
     """Genera config Plotly completa da risultati + chart type"""
 
-    COLORS = [
+    DEFAULT_COLORS = [
         "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
         "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
     ]
+
+    def __init__(self) -> None:
+        brand = get_brand_colors_and_font()
+        self.COLORS: List[str] = brand["colors"]
+        self.brand_font: Optional[str] = brand["font_family"]
+
+    def _apply_brand_font(self, layout: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply brand font_family to layout title, axis labels, legend, and global font."""
+        if not self.brand_font:
+            return layout
+        # Global font
+        if "font" not in layout:
+            layout["font"] = {}
+        layout["font"]["family"] = self.brand_font
+        # Title font
+        if "title" in layout and isinstance(layout["title"], dict):
+            if "font" not in layout["title"]:
+                layout["title"]["font"] = {}
+            layout["title"]["font"]["family"] = self.brand_font
+        # X-axis title font
+        if "xaxis" in layout and isinstance(layout["xaxis"], dict):
+            if "title" in layout["xaxis"] and isinstance(layout["xaxis"]["title"], dict):
+                if "font" not in layout["xaxis"]["title"]:
+                    layout["xaxis"]["title"]["font"] = {}
+                layout["xaxis"]["title"]["font"]["family"] = self.brand_font
+        # Y-axis title font
+        if "yaxis" in layout and isinstance(layout["yaxis"], dict):
+            if "title" in layout["yaxis"] and isinstance(layout["yaxis"]["title"], dict):
+                if "font" not in layout["yaxis"]["title"]:
+                    layout["yaxis"]["title"]["font"] = {}
+                layout["yaxis"]["title"]["font"]["family"] = self.brand_font
+        # Legend font
+        if "legend" in layout and isinstance(layout["legend"], dict):
+            if "font" not in layout["legend"]:
+                layout["legend"]["font"] = {}
+            layout["legend"]["font"]["family"] = self.brand_font
+        return layout
 
     def generate_config(
         self,
@@ -421,7 +501,11 @@ class PlotlyConfigGenerator:
         }
         
         generator = generators.get(chart_type, self._generate_table)
-        return generator(results, columns_info, title)
+        config = generator(results, columns_info, title)
+        # Apply brand font to layout
+        if "layout" in config:
+            config["layout"] = self._apply_brand_font(config["layout"])
+        return config
 
     def _generate_kpi_card(
         self, results: List[Dict[str, Any]], columns_info: List[ColumnInfo], title: Optional[str]
@@ -1219,6 +1303,9 @@ class ChartService:
             }]
         }
         
+        # Apply brand font to layout
+        layout = self.plotly_generator._apply_brand_font(layout)
+
         plotly_config = {"data": traces, "layout": layout}
         
         parameters = ParameterExtractor.extract_parameters(sql)

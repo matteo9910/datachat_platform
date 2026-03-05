@@ -4,6 +4,7 @@ import { LLMProvider } from '../../types';
 import { databaseApi, ConnectionStatus, SchemaResponse } from '../../api/databaseApi';
 import { Icons } from '../Layout/Icons';
 import { Toast, useToast } from '../ui/toast';
+import BrandSettings from './BrandSettings';
 
 const Settings: React.FC = () => {
   const { llmProvider, setLLMProvider, language, setLanguage } = useAppStore();
@@ -227,6 +228,9 @@ const Settings: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Brand Settings */}
+        <BrandSettings />
 
         {/* Info Sistema */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
