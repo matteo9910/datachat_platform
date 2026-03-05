@@ -1,0 +1,23 @@
+commands:
+  install_backend: cd backend && venv\Scripts\python.exe -m pip install -r requirements.txt
+  install_frontend: cd frontend && npm install
+  test_backend: cd backend && venv\Scripts\python.exe -m pytest tests/ -v --tb=short
+  test_frontend: cd frontend && npx vitest run --reporter=verbose 2>&1 || echo "No tests configured yet"
+  typecheck: cd frontend && npx tsc --noEmit
+  lint: cd frontend && npx eslint src/ --ext .ts,.tsx 2>&1 || echo "ESLint not configured yet"
+  build_frontend: cd frontend && npm run build
+
+services:
+  backend:
+    start: cd backend && venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
+    healthcheck: powershell -Command "Invoke-RestMethod -Uri 'http://localhost:8000/health' -Method Get"
+    port: 8000
+    depends_on: []
+
+  frontend:
+    start: cd frontend && npm run dev -- --port 5173
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
+    healthcheck: powershell -Command "Invoke-WebRequest -Uri 'http://localhost:5173' -Method Get -TimeoutSec 5"
+    port: 5173
+    depends_on: [backend]

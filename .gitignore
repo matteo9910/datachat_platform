@@ -62,6 +62,8 @@ backend/data/powerbi/backups/
 # Compiled frontend
 frontend/dist/
 
-# Claude/Factory (local config only)
+# Claude (local config only)
 .claude/
-.factory/
+
+# Factory research docs (contain example connection strings)
+.factory/research/
