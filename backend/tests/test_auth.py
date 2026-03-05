@@ -356,12 +356,12 @@ class TestAdminCreateUser:
         token = self._admin_token(client, db_session)
         # Create first user
         client.post("/api/admin/users", headers=_auth_header(token), json={
-            "email": "dup@test.com", "password": "pass",
+            "email": "dup@test.com", "password": "pass123456",
             "full_name": "First", "role": "user",
         })
         # Try duplicate
         resp = client.post("/api/admin/users", headers=_auth_header(token), json={
-            "email": "dup@test.com", "password": "pass",
+            "email": "dup@test.com", "password": "pass123456",
             "full_name": "Second", "role": "user",
         })
         assert resp.status_code == 409
@@ -369,7 +369,7 @@ class TestAdminCreateUser:
     def test_create_user_invalid_role(self, client, db_session):
         token = self._admin_token(client, db_session)
         resp = client.post("/api/admin/users", headers=_auth_header(token), json={
-            "email": "badrole@test.com", "password": "pass",
+            "email": "badrole@test.com", "password": "pass123456",
             "full_name": "Bad", "role": "superadmin",
         })
         assert resp.status_code == 400

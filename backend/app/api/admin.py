@@ -3,12 +3,13 @@ Admin API router — user management (CRUD, enable/disable).
 """
 
 import logging
+import re
 import uuid
 import uuid as uuid_module
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from app.database import get_system_db
@@ -19,6 +20,16 @@ from app.services.auth_service import hash_password
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+# Simple but effective email regex pattern
+_EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+
+
+def _validate_email_format(email: str) -> str:
+    """Validate email format. Raises ValueError if invalid."""
+    if not email or not _EMAIL_RE.match(email):
+        raise ValueError("Invalid email format")
+    return email
 
 
 # ---------------------------------------------------------------------------
@@ -31,12 +42,42 @@ class CreateUserRequest(BaseModel):
     full_name: str
     role: str = "user"
 
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        if not v or not _EMAIL_RE.match(v):
+            raise ValueError("Invalid email format")
+        return v.strip().lower()
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if not v or len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Full name is required")
+        return v.strip()
+
 
 class UpdateUserRequest(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v or not _EMAIL_RE.match(v):
+                raise ValueError("Invalid email format")
+            return v.strip().lower()
+        return v
 
 
 class UserResponse(BaseModel):
