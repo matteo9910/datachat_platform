@@ -9,6 +9,12 @@ import DatabaseSchema from './components/Database/DatabaseSchema';
 import Settings from './components/Settings/Settings';
 import OAuthCallback from './pages/OAuthCallback';
 import SetupWizard from './pages/SetupWizard';
+import KnowledgeBase from './pages/KnowledgeBase';
+import Instructions from './pages/Instructions';
+import WriteOperations from './pages/WriteOperations';
+import AdminPanel from './pages/AdminPanel';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
 import { useAppStore } from './store/appStore';
 import { databaseApi } from './api/databaseApi';
 import { LLMProvider } from './types';
@@ -16,12 +22,15 @@ import './styles/globals.css';
 
 const MainApp: React.FC = () => {
   const { activeTab, setLLMProvider } = useAppStore();
+  const { isAuthenticated } = useAuth();
   const [showSetup, setShowSetup] = useState<boolean | null>(null);
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
 
   useEffect(() => {
-    checkSetupStatus();
-  }, []);
+    if (isAuthenticated) {
+      checkSetupStatus();
+    }
+  }, [isAuthenticated]);
 
   const checkSetupStatus = async () => {
     setIsCheckingConnection(true);
@@ -32,23 +41,18 @@ const MainApp: React.FC = () => {
       setLLMProvider(savedLLM as LLMProvider);
     }
     
-    // Always check backend connection status as source of truth.
-    // If backend is not connected (e.g. after restart), show wizard
-    // regardless of localStorage state.
     try {
       const status = await databaseApi.getStatus();
       if (status.connected) {
         setShowSetup(false);
       } else {
-        // Backend not connected - clear stale setup state and show wizard
         localStorage.removeItem('datachat-setup-complete');
         localStorage.removeItem('datachat-connection-credentials');
         localStorage.removeItem('datachat-connection-config');
         localStorage.removeItem('datachat-selected-tables');
         setShowSetup(true);
       }
-    } catch (error) {
-      // Backend unreachable - clear state and show wizard
+    } catch {
       localStorage.removeItem('datachat-setup-complete');
       localStorage.removeItem('datachat-connection-credentials');
       localStorage.removeItem('datachat-connection-config');
@@ -60,11 +64,9 @@ const MainApp: React.FC = () => {
   };
 
   const handleSetupComplete = async () => {
-    // After setup, verify connection is still active and reconnect if needed
     try {
       const status = await databaseApi.getStatus();
       if (!status.connected) {
-        // Try to reconnect using saved credentials
         const savedCreds = localStorage.getItem('datachat-connection-credentials');
         if (savedCreds) {
           const creds = JSON.parse(savedCreds);
@@ -77,7 +79,7 @@ const MainApp: React.FC = () => {
     setShowSetup(false);
   };
 
-  // Show loading while checking
+  // Show loading while checking connection
   if (isCheckingConnection || showSetup === null) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -89,7 +91,7 @@ const MainApp: React.FC = () => {
     );
   }
 
-  // Show setup wizard if needed
+  // Show setup wizard if needed (after authentication)
   if (showSetup) {
     return <SetupWizard onComplete={handleSetupComplete} />;
   }
@@ -101,6 +103,10 @@ const MainApp: React.FC = () => {
       case 'dashboard': return <DashboardManager />;
       case 'database': return <DatabaseSchema />;
       case 'settings': return <Settings />;
+      case 'knowledge-base': return <KnowledgeBase />;
+      case 'instructions': return <Instructions />;
+      case 'write-ops': return <WriteOperations />;
+      case 'admin': return <AdminPanel />;
       default: return <ChatInterface />;
     }
   };
@@ -123,10 +129,16 @@ const MainApp: React.FC = () => {
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/oauth/callback" element={<OAuthCallback />} />
-        <Route path="/*" element={<MainApp />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/oauth/callback" element={<OAuthCallback />} />
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <MainApp />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 };

@@ -1,4 +1,4 @@
-﻿import { apiClient } from './client';
+import { apiClient } from './client';
 import { ChatQueryResponse, ThinkingStep } from '../types';
 
 export interface ChatQueryRequest {
@@ -15,6 +15,8 @@ export interface StreamEvent {
   error?: string;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 export const chatApi = {
   async query(request: ChatQueryRequest): Promise<ChatQueryResponse> {
     const response = await apiClient.post<ChatQueryResponse>('/api/chat/query', request);
@@ -29,11 +31,17 @@ export const chatApi = {
     onError: (error: string) => void,
     signal?: AbortSignal
   ): Promise<void> {
-    const response = await fetch('http://localhost:8000/api/chat/query/stream', {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    const token = localStorage.getItem('datachat-auth-token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/chat/query/stream`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(request),
       signal,
     });
