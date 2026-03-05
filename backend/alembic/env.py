@@ -31,7 +31,8 @@ target_metadata = SystemBase.metadata
 # Override sqlalchemy.url from environment
 system_url = settings.system_database_url
 if system_url:
-    config.set_main_option("sqlalchemy.url", system_url)
+    # Escape % for configparser interpolation (e.g. URL-encoded passwords)
+    config.set_main_option("sqlalchemy.url", system_url.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:

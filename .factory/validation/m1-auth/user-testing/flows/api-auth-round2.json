@@ -1,0 +1,98 @@
+{
+  "flowId": "api-auth-round2",
+  "testedAt": "2026-03-05T11:04:19.121628+00:00",
+  "credentials": {
+    "admin": "admin@datachat.local",
+    "user": "user1@test.local",
+    "namespace": "datachat-test"
+  },
+  "toolsUsed": [
+    "requests",
+    "sqlalchemy"
+  ],
+  "assertions": {
+    "VAL-AUTH-010": {
+      "status": "pass",
+      "evidence": "POST /api/auth/login -> 200 with seed admin credentials. Response: token + user {id: 2e965a12-75dd-4a65-b733-1affcee2fbad, email: admin@datachat.local, role: admin}",
+      "steps": [
+        {
+          "action": "POST /api/auth/login with seed admin email/password",
+          "expected": "200 with JWT and admin user",
+          "observed": "200 with JWT, user id=2e965a12, role=admin"
+        }
+      ],
+      "issues": null
+    },
+    "VAL-AUTH-013": {
+      "status": "pass",
+      "evidence": "POST /api/admin/users -> 403 with user-role JWT. Body: {detail: Insufficient permissions. Required: [admin]}",
+      "steps": [
+        {
+          "action": "Login as user1@test.local (role=user)",
+          "expected": "200 with user JWT",
+          "observed": "200, role=user, id=a99f767f"
+        },
+        {
+          "action": "POST /api/admin/users with user Bearer token",
+          "expected": "403 Forbidden",
+          "observed": "403 Insufficient permissions. Required: [admin]"
+        }
+      ],
+      "issues": null
+    },
+    "VAL-AUTH-015": {
+      "status": "pass",
+      "evidence": "PUT /api/admin/users/{admin_id} -> 400 with {is_active: false}. Body: {detail: Cannot disable your own account}",
+      "steps": [
+        {
+          "action": "Login as admin, get admin_id",
+          "expected": "admin_id from response",
+          "observed": "admin_id=2e965a12-75dd-4a65-b733-1affcee2fbad"
+        },
+        {
+          "action": "PUT /api/admin/users/{admin_id} with {is_active: false}",
+          "expected": "400 with self-disable error",
+          "observed": "400 Cannot disable your own account"
+        }
+      ],
+      "issues": null
+    },
+    "VAL-AUTH-016": {
+      "status": "pass",
+      "evidence": "POST /api/admin/users -> 409 with duplicate email admin@datachat.local. Body: {detail: A user with this email already exists}",
+      "steps": [
+        {
+          "action": "POST /api/admin/users with email=admin@datachat.local",
+          "expected": "409 Conflict",
+          "observed": "409 A user with this email already exists"
+        }
+      ],
+      "issues": null
+    },
+    "VAL-AGNOSTIC-001": {
+      "status": "fail",
+      "evidence": "SELECT table_name FROM information_schema.tables WHERE table_schema=public on client DB returned: alembic_version, audit_log, brand_config, dashboard_metadata, instructions, kb_pairs, sessions, users, view_metadata, write_whitelist. All 10 system tables found in client DB. Expected business tables (dim_products, fact_orders, inventory_snapshot) NOT present.",
+      "steps": [
+        {
+          "action": "Connect to client DB via SQLAlchemy (Supabase pooler port 6543)",
+          "expected": "Connection succeeds",
+          "observed": "Connection succeeded"
+        },
+        {
+          "action": "Query information_schema.tables WHERE table_schema=public",
+          "expected": "Only business data tables, no system tables",
+          "observed": "Found 10 system tables, 0 business tables"
+        },
+        {
+          "action": "Query all schemas for comprehensive listing",
+          "expected": "No system tables in any schema",
+          "observed": "System tables in public schema. Business tables missing entirely."
+        }
+      ],
+      "issues": "All 10 system tables exist in client DB public schema. Alembic migrations appear to have run against client DB (DATABASE_URL) instead of system DB (SYSTEM_DATABASE_URL). Business tables (dim_products, fact_orders, inventory_snapshot) are also missing from client DB."
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 4 passed, 1 failed. VAL-AUTH-010/013/015/016 all pass. VAL-AGNOSTIC-001 FAILS: all 10 system tables exist in client DB (Supabase), violating two-database architecture."
+}
