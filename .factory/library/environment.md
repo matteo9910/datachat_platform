@@ -31,3 +31,6 @@ Environment variables, external dependencies, and setup notes.
 - Python venv activation: `backend\venv\Scripts\activate` or direct `backend\venv\Scripts\python.exe`
 - Line ending warnings (LF→CRLF) are cosmetic, git operations succeed
 - Git push shows exit code 1 with stderr messages — push actually succeeds
+- **OneDrive path workaround:** The Factory Create tool fails with `EEXIST: file already exists, mkdir` errors on paths containing spaces (e.g., `OneDrive - EY`). Workaround: use `Execute` with Python to write files (`open(path, 'w').write(content)`) then use `Edit` tool to refine, or write via PowerShell `.NET` methods (`[System.IO.File]::WriteAllText(path, content)`).
+- **PowerShell template literal escaping:** Writing TypeScript files containing backtick template literals via PowerShell is problematic (backtick is PowerShell escape character). Use Python helper scripts to write such files instead.
+- **File encoding:** Use UTF-8 without BOM. Several files had BOM characters removed in m1-auth-frontend. Do not re-introduce BOMs.

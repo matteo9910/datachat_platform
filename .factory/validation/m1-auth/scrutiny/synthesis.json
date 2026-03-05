@@ -1,0 +1,137 @@
+{
+  "milestone": "m1-auth",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "cd backend && venv\\\\Scripts\\\\python.exe -m pytest tests/ -v --tb=short",
+      "exitCode": 0,
+      "details": "97 passed, 2 warnings in 43.28s"
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "cd frontend && npx tsc --noEmit",
+      "exitCode": 0,
+      "details": "No type errors"
+    },
+    "lint": {
+      "passed": true,
+      "command": "cd frontend && npx eslint src/ --ext .ts,.tsx",
+      "exitCode": 0,
+      "details": "ESLint not configured yet. Treated as pass per services.yaml fallback."
+    },
+    "build": {
+      "passed": true,
+      "command": "cd frontend && npm run build",
+      "exitCode": 0,
+      "details": "tsc and vite build succeeded. 135 modules, built in 45.19s."
+    }
+  },
+  "reviewsSummary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "nonBlockingIssues": [
+    {
+      "featureId": "m1-system-db-setup",
+      "count": 6,
+      "highlights": "Mixed type hint styles, BrandConfig String(7) limits, global mutable state in database.py, missing cascade delete test"
+    },
+    {
+      "featureId": "m1-auth-api",
+      "count": 6,
+      "highlights": "Redundant uuid imports, weak default secret_key, untyped dict response, timezone handling, logout without JWT validation"
+    },
+    {
+      "featureId": "m1-user-mgmt-api",
+      "count": 5,
+      "highlights": "Dead _validate_email_format function, redundant dual uuid import, race condition on duplicate email, missing full_name validation on update"
+    },
+    {
+      "featureId": "m1-auth-frontend",
+      "count": 7,
+      "highlights": "Duplicated TOKEN_KEY constant, no proactive JWT expiry check, localStorage role tampering (UI-only), odd password placeholder, modal state not reset"
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "file": ".factory/library/environment.md",
+      "description": "Added OneDrive path workaround, PowerShell template literal escaping, UTF-8 without BOM convention",
+      "sourceFeatures": [
+        "m1-system-db-setup",
+        "m1-auth-api",
+        "m1-user-mgmt-api",
+        "m1-auth-frontend"
+      ]
+    },
+    {
+      "target": "library",
+      "file": ".factory/library/architecture.md",
+      "description": "Added SQLite JSONB test pattern, auth middleware placement docs, known technical debt",
+      "sourceFeatures": [
+        "m1-system-db-setup",
+        "m1-auth-api"
+      ]
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add Python type hint convention: Use Optional[str] consistently (not str | None PEP 604 syntax)",
+      "evidence": "backend/app/config.py mixes both styles across features",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify auth dependencies live in backend/app/services/auth_middleware.py, not backend/app/middleware/",
+      "evidence": "Two reviewers flagged this convention gap. Workers correctly used services/ not middleware/.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify frontend placement: pages/ for page-level, components/{Feature}/ for reusable, components/Auth/ for auth",
+      "evidence": "m1-auth-frontend mixed AdminPanel in pages/ but LoginPage in components/Auth/",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add convention: shared frontend constants in a single module, not duplicated across files",
+      "evidence": "TOKEN_KEY duplicated in client.ts and AuthContext.tsx",
+      "isSystemic": false
+    },
+    {
+      "target": "skills",
+      "skill": "backend-worker",
+      "suggestion": "Add TDD exception for infrastructure and enhancement features where strict RED-GREEN-REFACTOR is impractical",
+      "evidence": "All 3 backend workers deviated from TDD procedure for valid reasons",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "skill": "fullstack-worker",
+      "suggestion": "Note vitest may not be configured. Accept tsc --noEmit + npm run build as alternatives",
+      "evidence": "services.yaml test_frontend echoes No tests configured yet",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Dual uuid import pattern in admin.py",
+      "reason": "Code quality issue, not a convention gap. Normal cleanup."
+    },
+    {
+      "observation": "Admin CRUD split across two features",
+      "reason": "Normal incremental development. Ownership clear from features.json."
+    },
+    {
+      "observation": "Test helpers bypass API validation",
+      "reason": "Standard test practice for fixture creation."
+    }
+  ],
+  "previousRound": null
+}

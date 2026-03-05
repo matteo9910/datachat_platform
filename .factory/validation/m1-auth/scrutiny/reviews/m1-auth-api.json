@@ -1,0 +1,73 @@
+{
+  "featureId": "m1-auth-api",
+  "reviewedAt": "2026-03-05T11:05:00.000Z",
+  "commitId": "1195e77",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation covering all feature requirements. 7 files changed (1143 insertions) implementing JWT auth with login/logout endpoints, role-based middleware, admin user CRUD, and seed admin. 34 comprehensive tests cover password hashing, JWT lifecycle, session management, login/logout flows, middleware auth/role checks, admin CRUD, and full integration flows. Code is well-structured following existing project conventions. No blocking issues found; several non-blocking observations noted.",
+    "issues": [
+      {
+        "file": "backend/app/api/admin.py",
+        "line": 7,
+        "severity": "non_blocking",
+        "description": "Redundant imports: `import uuid` and `import uuid as uuid_module` on consecutive lines. Only one alias is needed. Should use `import uuid` throughout and reference `uuid.uuid4()` and `uuid.UUID()` consistently."
+      },
+      {
+        "file": "backend/app/config.py",
+        "line": 84,
+        "severity": "non_blocking",
+        "description": "Default secret_key value 'change-me-generate-with-openssl-rand-hex-32' is a weak placeholder. If deployed without setting SECRET_KEY env var, JWTs would be signed with this predictable string. Consider adding a startup warning or validation when running in production mode (ENVIRONMENT=production) with the default key."
+      },
+      {
+        "file": "backend/app/api/auth.py",
+        "line": 40,
+        "severity": "non_blocking",
+        "description": "LoginResponse.user is typed as `dict` rather than a dedicated Pydantic schema. While functional, a typed UserInfo model would improve API documentation and type safety for frontend consumers."
+      },
+      {
+        "file": "backend/app/services/auth_service.py",
+        "line": 117,
+        "severity": "non_blocking",
+        "description": "In `is_session_valid()`, `sess.expires_at.replace(tzinfo=timezone.utc)` assumes the stored datetime is naive (no timezone). This works with SQLite (used in tests) and PostgreSQL DateTime columns without timezone, but could produce incorrect comparisons if the column type is changed to TimezoneAware. Consider using `datetime.now(timezone.utc).replace(tzinfo=None)` for comparison, or ensuring the model always stores UTC-aware timestamps."
+      },
+      {
+        "file": "backend/app/api/auth.py",
+        "line": 90,
+        "severity": "non_blocking",
+        "description": "Logout endpoint extracts token via `bearer_scheme` but does not validate JWT claims before calling `invalidate_session`. It directly deletes the session by token string match. While not exploitable in practice (JWTs are long random strings), a malformed token that coincidentally matches a DB record would be invalidated without JWT verification. Low risk given token entropy."
+      },
+      {
+        "file": "backend/app/api/admin.py",
+        "line": null,
+        "severity": "non_blocking",
+        "description": "No email format validation on user creation (POST /api/admin/users). Any string is accepted as email. This is expected to be addressed by the separate m1-user-mgmt-api feature which explicitly lists email validation in its description."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Auth middleware (get_current_user, require_role) is placed in `backend/app/services/auth_middleware.py` rather than `backend/app/middleware/`. The task description references `backend/app/middleware/` as a key directory, but the worker chose `services/`. AGENTS.md says 'Services in backend/app/services/' for business logic, which doesn't perfectly describe middleware. However, since FastAPI dependency-based auth is more like a service dependency than ASGI middleware, this placement is defensible. AGENTS.md should clarify that auth dependencies live in services/ not middleware/.",
+      "evidence": "Feature task says 'backend/app/middleware/ (auth middleware, role decorator)' but code is at backend/app/services/auth_middleware.py. AGENTS.md 'Services in backend/app/services/' line doesn't mention auth dependencies."
+    },
+    {
+      "area": "conventions",
+      "observation": "Admin CRUD endpoints (GET/POST/PUT /api/admin/users) were included in the m1-auth-api commit, but there's also a separate m1-user-mgmt-api feature that enhances the same endpoints with email validation and more tests. This split isn't documented—future workers editing admin.py may not know which feature 'owns' it.",
+      "evidence": "Commit 1195e77 (m1-auth-api) creates backend/app/api/admin.py with full CRUD. Commit 91acd34 (m1-user-mgmt-api) modifies the same file. features.json has both features targeting admin endpoints."
+    },
+    {
+      "area": "skills",
+      "observation": "Worker deviated from the backend-worker skill's TDD procedure (write tests first, then implement). Worker noted in skillFeedback that for auth with cross-cutting middleware dependencies, it was more efficient to implement service+middleware+routers together and then write comprehensive tests. This is a valid deviation—the skill's strict RED-GREEN-REFACTOR procedure doesn't account for features where test fixtures require all components to exist first.",
+      "evidence": "Handoff skillFeedback.suggestedChanges: 'The backend-worker skill suggests writing tests first (RED), but for auth features with cross-cutting middleware dependencies, it was more efficient to implement the service+middleware+routers together and then write comprehensive tests, since the test fixtures needed all components to exist.'"
+    },
+    {
+      "area": "knowledge",
+      "observation": "Worker discovered that the Factory Create tool fails with 'EEXIST: file already exists, mkdir' errors when targeting paths containing OneDrive sync folders with spaces (e.g., 'OneDrive - EY'). Workaround: use PowerShell .NET methods ([System.IO.File]::WriteAllText) to create placeholder files, then use Edit tool to write content. Alternatively, use Python scripts to create files. This environment quirk cost significant transcript turns.",
+      "evidence": "Transcript shows multiple failed Create tool calls with 'Error writing file: EEXIST: file already exists, mkdir' for backend/ paths. Worker pivoted to PowerShell New-Item, then .NET WriteAllText, then Python script approach. At least 10 tool calls were spent on this workaround."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The m1-auth-api feature is well-implemented with comprehensive coverage of all requirements: JWT login/logout, auth middleware with session DB validation, role-based access control, seed admin on startup, admin self-disable protection, and configurable token expiry. 34 tests cover unit, API endpoint, middleware, admin CRUD, and integration flow scenarios. Code follows project conventions and uses the specified libraries (python-jose, passlib+bcrypt). All four validation assertions (VAL-AUTH-010, VAL-AUTH-012, VAL-AUTH-013, VAL-AUTH-015) are fulfilled. Six non-blocking code quality observations noted (redundant import, weak default secret_key, untyped response dict, timezone handling, pre-JWT logout validation, missing email validation). Four shared state observations documented regarding middleware placement convention, feature ownership overlap, TDD skill deviation, and OneDrive tooling quirk."
+}

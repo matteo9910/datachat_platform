@@ -1,0 +1,78 @@
+{
+  "featureId": "m1-system-db-setup",
+  "reviewedAt": "2026-03-05T11:00:00.000Z",
+  "commitId": "4f479e2",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation of all 9 system database tables with proper SQLAlchemy models, Alembic migration, separate system DB engine/session factory, and comprehensive tests (20 passing). The architecture correctly isolates system tables from the client DB via a separate SystemBase. All columns match the feature specification. Code quality is good with proper use of indexes, foreign keys, cascade rules, and timezone-aware timestamps. Minor non-blocking style inconsistencies noted.",
+    "issues": [
+      {
+        "file": "backend/app/config.py",
+        "line": 28,
+        "severity": "non_blocking",
+        "description": "Uses `str | None` Python 3.10+ type hint syntax for system_database_url while other Optional fields in the same class use `Optional[str]` from typing. Minor style inconsistency. Both work on Python 3.14.2 but mixing styles reduces readability."
+      },
+      {
+        "file": "backend/app/models/system.py",
+        "line": 131,
+        "severity": "non_blocking",
+        "description": "BrandConfig.primary_color is String(7) which supports #RRGGBB hex only. If future requirements need RGBA or extended color formats, this length constraint would need updating. Acceptable for current PRD requirements."
+      },
+      {
+        "file": "backend/app/database.py",
+        "line": 28,
+        "severity": "non_blocking",
+        "description": "Global mutable state (_system_engine, _SystemSessionLocal) is used for lazy initialization. This works for single-process deployments but could cause issues in multi-worker scenarios (e.g., with gunicorn workers). Each worker process gets its own copy though, so this is acceptable for the current deployment model."
+      },
+      {
+        "file": "backend/tests/test_system_db.py",
+        "line": 35,
+        "severity": "non_blocking",
+        "description": "The @compiles(JSONB, 'sqlite') decorator permanently registers a compilation rule in SQLAlchemy's global compiler registry. This could affect other test files if they need actual JSONB behavior. The module-scoped fixture mitigates this somewhat. Consider using a separate test database configuration if this becomes an issue."
+      },
+      {
+        "file": "backend/tests/test_system_db.py",
+        "line": 0,
+        "severity": "non_blocking",
+        "description": "No test for User-Session cascade delete behavior (deleting a user should cascade-delete their sessions). This relationship is defined in the model but not explicitly tested. The cascade would be tested indirectly when auth features exercise session cleanup."
+      },
+      {
+        "file": "backend/alembic/versions/0001_create_all_system_tables.py",
+        "line": 149,
+        "severity": "non_blocking",
+        "description": "Downgrade uses raw SQL 'DROP TYPE IF EXISTS ...' for enum cleanup. While functional, using postgresql.ENUM.drop() would be more consistent with the upgrade approach. Minor style point."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker used `str | None` (PEP 604 syntax) for the new system_database_url field in config.py, while existing fields use `Optional[str]` from typing. AGENTS.md doesn't specify a preference for type hint style. Both syntaxes are valid in Python 3.14.2 but mixing reduces consistency.",
+      "evidence": "backend/app/config.py:28 uses `str | None` while lines 35-38 use `Optional[str]` for azure_openai_endpoint etc."
+    },
+    {
+      "area": "conventions",
+      "observation": "Pre-existing client DB models file uses deprecated `from sqlalchemy.ext.declarative import declarative_base` while the new system models correctly use `from sqlalchemy.orm import declarative_base`. Worker noted this as a discovered issue but correctly did not fix it (out of scope). Future workers should be aware of this deprecation.",
+      "evidence": "backend/app/models/database.py:7 uses `from sqlalchemy.ext.declarative import declarative_base` (deprecated), backend/app/models/system.py:17 uses `from sqlalchemy.orm import declarative_base` (correct)"
+    },
+    {
+      "area": "skills",
+      "observation": "Worker noted that the backend-worker skill's TDD approach (write tests first -> RED) doesn't fit well for database infrastructure features where the models ARE the implementation. Worker wrote models and tests together instead. The skill feedback suggests adding this exception, which is a reasonable observation.",
+      "evidence": "Handoff skillFeedback.suggestedChanges: 'The backend-worker skill suggests writing tests first (RED), but for database infrastructure features where the models themselves ARE the implementation, writing models + tests together is more practical.'"
+    },
+    {
+      "area": "knowledge",
+      "observation": "Worker encountered significant friction with the Create tool on paths containing spaces (OneDrive - EY path). Had to use a _tmp_writer.py workaround script to create files. This is an environment-specific quirk that other workers will likely encounter.",
+      "evidence": "Transcript shows multiple failed Create tool calls with 'EEXIST: file already exists, mkdir' errors, followed by workaround using Execute to write files via Python scripts."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Tests use SQLite in-memory database with a JSONB->TEXT compilation override for testing PostgreSQL-specific models without a live Neon connection. Future workers building on system DB models should reuse this test fixture pattern from test_system_db.py.",
+      "evidence": "backend/tests/test_system_db.py:30-38 — @compiles(JSONB, 'sqlite') pattern and in-memory SQLite engine fixture"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature m1-system-db-setup passes review. All 9 system tables (users, sessions, audit_log, brand_config, write_whitelist, kb_pairs, instructions, view_metadata, dashboard_metadata) are correctly modeled with appropriate column types, indexes, foreign keys, and cascade rules. The system DB engine/session factory is properly isolated from the client DB connection. Alembic is initialized with a comprehensive initial migration. 20 tests cover model CRUD, enum validation, database module functions, and the critical system/client DB isolation check. The implementation fulfills VAL-AGNOSTIC-001. Only non-blocking style issues were found (mixed type hint syntax, missing cascade delete test, no blocking defects)."
+}

@@ -55,3 +55,24 @@ Strategy pattern in `llm_provider.py`:
 - System DB → Neon PostgreSQL (free tier, pooled connection)
 - Client DB → Supabase PostgreSQL (existing, pooler port 6543)
 - ChromaDB → Embedded in Railway container (volume /data/chroma_db)
+
+## Testing Patterns
+
+### System DB Tests with SQLite
+Backend tests use SQLite in-memory database with a JSONB→TEXT compilation override for testing PostgreSQL-specific system models without a live Neon connection. The pattern is in `backend/tests/test_system_db.py`:
+```python
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.postgresql import JSONB
+
+@compiles(JSONB, "sqlite")
+def compile_jsonb_sqlite(type_, compiler, **kw):
+    return "TEXT"
+```
+Future workers building on system DB models should reuse this test fixture pattern.
+
+### Auth Middleware
+Auth dependencies (`get_current_user`, `require_role`) are implemented as FastAPI dependencies in `backend/app/services/auth_middleware.py` (not ASGI middleware). This is the correct pattern for FastAPI — use Depends() injection rather than ASGI middleware for request-level auth.
+
+## Known Technical Debt
+- `backend/app/models/database.py` uses deprecated `from sqlalchemy.ext.declarative import declarative_base`. The newer system models in `system.py` correctly use `from sqlalchemy.orm import declarative_base`. Should be updated when touching that file.
+- `backend/app/config.py` mixes type hint styles: `str | None` (PEP 604) and `Optional[str]` (typing module). Both work on Python 3.14.2 but inconsistent.

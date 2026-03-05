@@ -1,0 +1,67 @@
+{
+  "featureId": "m1-user-mgmt-api",
+  "reviewedAt": "2026-03-05T11:05:00.000Z",
+  "commitId": "91acd34",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature correctly implements admin user management CRUD API with email validation, password length validation, email normalization, and comprehensive test coverage (43 tests). All three endpoints (GET list, POST create, PUT update) enforce admin-only access. Email validation uses a reasonable regex pattern with Pydantic field_validator. Duplicate email returns 409. VAL-AUTH-016 is fully satisfied. A few non-blocking code quality issues were found: dead code (_validate_email_format function defined but never called), redundant dual uuid import, no IntegrityError catch for race conditions on duplicate email, and missing newline at end of test file.",
+    "issues": [
+      {
+        "file": "backend/app/api/admin.py",
+        "line": 29,
+        "severity": "non_blocking",
+        "description": "Dead code: _validate_email_format() function is defined at module level but never called. Email validation is performed through Pydantic field_validator decorators on the request models instead. This function should be removed to avoid confusion."
+      },
+      {
+        "file": "backend/app/api/admin.py",
+        "line": 7,
+        "severity": "non_blocking",
+        "description": "Redundant imports: both 'import uuid' (line 7) and 'import uuid as uuid_module' (line 8) are present. This dual-import pattern was introduced by the m1-auth-api worker. Should consolidate to a single import (e.g., just 'import uuid' and use uuid.UUID() for parsing)."
+      },
+      {
+        "file": "backend/app/api/admin.py",
+        "line": 141,
+        "severity": "non_blocking",
+        "description": "Race condition on duplicate email check: The code queries for existing email, then creates the user in separate steps without wrapping in a transaction lock. If two admin requests create users with the same email concurrently, the check could pass for both, and only the DB UNIQUE constraint would catch it — resulting in an unhandled IntegrityError (500) instead of a clean 409. Low risk for admin CRUD but could be improved by catching sqlalchemy.exc.IntegrityError and returning 409."
+      },
+      {
+        "file": "backend/app/api/admin.py",
+        "line": 70,
+        "severity": "non_blocking",
+        "description": "UpdateUserRequest does not validate full_name if provided. An empty string '' can be set as full_name on update. The CreateUserRequest has full_name validation, but UpdateUserRequest doesn't. Minor inconsistency — not required by spec but could lead to data quality issues."
+      },
+      {
+        "file": "backend/tests/test_admin_users.py",
+        "line": 701,
+        "severity": "non_blocking",
+        "description": "Missing trailing newline at end of file (git diff shows 'No newline at end of file'). Minor style issue per POSIX convention."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The 'import uuid' + 'import uuid as uuid_module' dual-import pattern exists in admin.py (introduced by m1-auth-api worker). This is an inconsistent pattern that could proliferate. AGENTS.md doesn't mention a convention for UUID imports.",
+      "evidence": "backend/app/api/admin.py:7-8 has both 'import uuid' and 'import uuid as uuid_module'. The auth_middleware.py:8 uses 'import uuid as uuid_module'. This was inherited from the m1-auth-api feature's UUID compatibility fix for SQLite."
+    },
+    {
+      "area": "skills",
+      "observation": "Worker correctly noted that TDD (write tests first, RED) was not practical since the CRUD endpoints already existed from m1-auth-api. The backend-worker skill procedure says 'Write tests first (RED)' but this doesn't apply when enhancing existing endpoints. The skill should acknowledge the 'enhance existing code' workflow where tests are written alongside/after validation additions.",
+      "evidence": "Handoff skillFeedback.suggestedChanges: \"The backend-worker skill says 'Write tests first (RED)' but in this case the CRUD endpoints already existed from the m1-auth-api feature. The work was adding validation + writing dedicated tests. TDD was not practical since the endpoints were already implemented.\""
+    },
+    {
+      "area": "conventions",
+      "observation": "The worker used the Create tool to write a placeholder file via Python Execute, then used Edit tool to replace placeholder content. This is a workaround for the EEXIST error with OneDrive paths. This environment quirk (OneDrive path causing EEXIST on Create tool) affects all workers and should be documented.",
+      "evidence": "Transcript shows worker calling Create tool which failed with 'Error writing file: EEXIST: file already exists, mkdir C:\\Users\\TF536AC\\OneDrive - EY\\WORK\\...\\backend\\tests'. Worker then used Execute to write placeholder via Python, then Edit to replace content."
+    },
+    {
+      "area": "conventions",
+      "observation": "Test helper functions create users directly in DB with passwords shorter than the new API minimum (6 chars), e.g. password='pass' (4 chars). These bypass API validation since they write directly to the database. While functionally correct for testing auth enforcement, it means test data doesn't follow the same validation rules as production data. Not a bug but could be confusing for future workers.",
+      "evidence": "backend/tests/test_admin_users.py: TestAdminUsersAuthEnforcement class creates users via _create_user() with password='pass' (line ~175-210), while API requires minimum 6 characters."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature m1-user-mgmt-api PASSES review. The implementation correctly adds email format validation (regex), password minimum length (6 chars), full_name validation, and email normalization (lowercase) to the admin CRUD API. All three endpoints (GET /api/admin/users, POST /api/admin/users, PUT /api/admin/users/{id}) properly enforce admin-only access. The 43-test test suite is comprehensive, covering auth enforcement, CRUD operations, email validation edge cases, duplicate email handling (409), role validation, admin self-disable prevention, and integration flows. VAL-AUTH-016 (duplicate email rejected on user creation) is fully satisfied. Five non-blocking issues identified: dead code (_validate_email_format), redundant uuid imports, potential race condition on duplicate email, missing full_name validation on update, and missing trailing newline. None are blocking."
+}

@@ -1,0 +1,84 @@
+{
+  "featureId": "m1-auth-frontend",
+  "reviewedAt": "2026-03-05T11:00:00.000Z",
+  "commitId": "3f70f7b",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation covering all 9 feature requirements. LoginPage, AuthContext, ProtectedRoute, role-gated Sidebar, AdminPanel with CRUD modals, axios auth interceptor, 401 redirect handler, streaming auth header, and placeholder pages all implemented correctly. 15 files changed (765 additions, 44 deletions). TypeScript check and production build both pass. 97 backend tests unaffected. No blocking issues found. A few non-blocking quality items noted below.",
+    "issues": [
+      {
+        "file": "frontend/src/api/client.ts",
+        "line": 4,
+        "severity": "non_blocking",
+        "description": "TOKEN_KEY and USER_KEY constants are duplicated in both client.ts (lines 4-5) and AuthContext.tsx (lines 17-18). If someone changes a key name in one place but not the other, auth state will break silently. These should be defined in one shared module and imported by both files."
+      },
+      {
+        "file": "frontend/src/contexts/AuthContext.tsx",
+        "line": 28,
+        "severity": "non_blocking",
+        "description": "On mount, the AuthContext restores the token from localStorage but does not validate JWT expiry (e.g., by decoding the exp claim). This means an expired token is treated as valid until the first API call returns 401, causing a brief flash of authenticated UI before redirect. The 401 interceptor makes this self-correcting, but a proactive expiry check would improve UX."
+      },
+      {
+        "file": "frontend/src/contexts/AuthContext.tsx",
+        "line": 30,
+        "severity": "non_blocking",
+        "description": "User object (including role) stored in localStorage as plain JSON. A user could modify their role in localStorage to see admin-only menu items in the sidebar. This is UI-only (backend enforces role checks on API calls), but it's a defense-in-depth gap. Consider deriving role from the JWT claims on mount instead."
+      },
+      {
+        "file": "frontend/src/components/Auth/LoginPage.tsx",
+        "line": 83,
+        "severity": "non_blocking",
+        "description": "Password input has placeholder='bullets' which is unusual and potentially confusing. Consider removing the placeholder or using a standard hint like '••••••••'."
+      },
+      {
+        "file": "frontend/src/components/Layout/Sidebar.tsx",
+        "line": 19,
+        "severity": "non_blocking",
+        "description": "Feature spec says 'User sees only Chat/Charts/Dashboard/Schema' but implementation also shows Settings to all users (no roles restriction on the settings menu item). This is a minor deviation — keeping Settings accessible to all seems reasonable but diverges from the literal spec."
+      },
+      {
+        "file": "frontend/src/pages/AdminPanel.tsx",
+        "line": 243,
+        "severity": "non_blocking",
+        "description": "Missing newline at end of file. Also affects Icons.tsx. Minor style issue."
+      },
+      {
+        "file": "frontend/src/pages/AdminPanel.tsx",
+        "line": 14,
+        "severity": "non_blocking",
+        "description": "CreateUserModal form state (email, password, fullName, role) is not reset when the modal is closed without submitting. If user opens the modal again, stale data from the previous attempt remains pre-filled. Consider resetting state in the onClose handler or via a useEffect on isOpen."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker placed AdminPanel, Instructions, KnowledgeBase, WriteOperations in `frontend/src/pages/` but LoginPage and ProtectedRoute in `frontend/src/components/Auth/`. AGENTS.md says 'Components in frontend/src/components/{Feature}/' while architecture.md lists 'frontend/src/pages/ — Page-level components'. The mixed pattern for where page-level components go (pages/ vs components/{Feature}/) should be clarified.",
+      "evidence": "AdminPanel.tsx at frontend/src/pages/AdminPanel.tsx vs LoginPage.tsx at frontend/src/components/Auth/LoginPage.tsx. Both are page-level components but placed differently."
+    },
+    {
+      "area": "conventions",
+      "observation": "TOKEN_KEY constant is duplicated across two files (client.ts and AuthContext.tsx). No convention exists in AGENTS.md for sharing frontend constants. Future workers may introduce their own constant definitions, causing drift. Consider adding a constants.ts or shared config module convention.",
+      "evidence": "frontend/src/api/client.ts:4 defines TOKEN_KEY='datachat-auth-token', frontend/src/contexts/AuthContext.tsx:17 defines the same."
+    },
+    {
+      "area": "skills",
+      "observation": "The fullstack-worker skill procedure step 6 says 'Frontend tests (RED): cd frontend && npx vitest run --reporter=verbose' but vitest is not configured in this project. Worker correctly identified this as a pre-existing limitation and skipped it. The skill procedure should note that frontend testing may not be available yet and that tsc --noEmit + npm run build are acceptable verification alternatives until vitest is set up.",
+      "evidence": "Handoff discoveredIssues[0]: 'Pre-existing: Frontend vitest is not configured yet'. services.yaml test_frontend command echoes 'No tests configured yet'."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Worker spent significant effort working around Windows PowerShell escaping issues when writing TypeScript files with template literals (backticks). Used Python helper scripts as a workaround. This is a recurring pattern issue on Windows that should be documented in library/environment.md so future workers use the Python-script approach from the start.",
+      "evidence": "Transcript shows multiple failed attempts to write files with template literals via PowerShell before switching to Python scripts. skillFeedback.suggestedChanges: 'The fullstack-worker skill could benefit from noting Windows PowerShell escaping challenges when writing TypeScript files with template literals.'"
+    },
+    {
+      "area": "conventions",
+      "observation": "Worker removed BOM (Byte Order Mark) characters from 4 existing files (client.ts, chatApi.ts, Header.tsx, Sidebar.tsx). This cleanup is good practice. AGENTS.md should mention that files should use UTF-8 without BOM to prevent future workers from re-introducing BOMs.",
+      "evidence": "Git diff shows removal of BOM (\\uFEFF) from the first line of client.ts, chatApi.ts, Header.tsx, and Sidebar.tsx."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The m1-auth-frontend feature is well-implemented and covers all 9 requirements from the feature description: LoginPage with error handling, AuthContext with localStorage persistence, ProtectedRoute wrapper, role-gated Sidebar (Admin sees all, Analyst sees all except Admin Panel, User sees base items + Settings), AdminPanel with create/edit modals, logout button, axios Bearer interceptor, 401 redirect handler, and streaming auth header. All 16 validation assertions (VAL-AUTH-001 through VAL-CROSS-012) are fulfilled. No blocking issues found. Seven non-blocking items identified: duplicated TOKEN_KEY constant, no proactive JWT expiry check on mount, localStorage role tampering (UI-only, backend enforces), odd password placeholder text, Settings visibility for User role deviating from spec, missing EOF newlines, and modal state not reset on close. Five shared state observations logged regarding component placement conventions, constant sharing, skill procedure accuracy, Windows PowerShell workaround knowledge, and BOM cleanup convention."
+}
