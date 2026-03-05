@@ -130,6 +130,10 @@ app.include_router(brand_router)
 from app.api.write import router as write_router
 app.include_router(write_router)
 
+# Include Speech-to-Text Router
+from app.api.speech import router as speech_router
+app.include_router(speech_router)
+
 
 # ============================================================
 # MODELS

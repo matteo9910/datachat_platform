@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     azure_openai_embedding_endpoint: Optional[str] = None
     azure_openai_embedding_deployment: str = "text-embedding-3-large"
 
+    # Azure Whisper (Speech-to-Text)
+    azure_whisper_endpoint: Optional[str] = None
+    azure_whisper_api_key: Optional[str] = None
+    azure_whisper_deployment_name: str = "whisper"
+    azure_whisper_api_version: str = "2024-06-01"
+
     # Azure OpenAI GPT-5.2
     azure_gpt52_endpoint: Optional[str] = None
     azure_gpt52_api_key: Optional[str] = None

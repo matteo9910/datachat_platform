@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { writeApi } from '../../api/writeApi';
 import type { GenerateWriteResponse, WhitelistEntry } from '../../api/writeApi';
+import VoiceMicButton from '../common/VoiceMicButton';
 
 const WriteOperationsPage: React.FC = () => {
   const { user } = useAuth();
@@ -123,13 +124,19 @@ const WriteOperationsPage: React.FC = () => {
           <p className="text-xs text-slate-400">
             Whitelisted: {[...new Set(whitelist.map(w => w.table_name))].join(', ')}
           </p>
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating || !nlText.trim()}
-            className="px-5 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isGenerating ? 'Generating...' : 'Generate SQL'}
-          </button>
+          <div className="flex items-center gap-2">
+            <VoiceMicButton
+              onTranscribe={(text) => setNlText((prev) => (prev ? prev + ' ' + text : text))}
+              disabled={isGenerating}
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating || !nlText.trim()}
+              className="px-5 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {isGenerating ? 'Generating...' : 'Generate SQL'}
+            </button>
+          </div>
         </div>
       </div>
 

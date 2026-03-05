@@ -10,6 +10,7 @@ import { Toast, useToast } from '../ui/toast';
 import { ConfirmModal } from '../ui/modal';
 import SaveToKBButton from '../Knowledge/SaveToKBButton';
 import SaveAsViewButton from './SaveAsViewButton';
+import VoiceMicButton from '../common/VoiceMicButton';
 
 // Component for saved thinking step in completed messages
 const SavedThinkingStepItem: React.FC<{ step: ThinkingStep; index: number }> = ({ step, index }) => {
@@ -1245,32 +1246,38 @@ const ChatInterface: React.FC = () => {
                 }
               }}
               placeholder={language === 'it' ? "Fai una domanda sui tuoi dati..." : "Ask a question about your data..."}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-5 pr-14 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all resize-none overflow-hidden leading-relaxed"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-5 pr-24 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all resize-none overflow-hidden leading-relaxed"
               disabled={isLoading}
               rows={1}
             />
-            {isLoading ? (
-              <button 
-                type="button"
-                onClick={handleStop}
-                className="absolute right-3 bottom-3 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-white hover:bg-slate-900 transition-all"
-                title="Interrompi elaborazione"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="4" y="4" width="16" height="16" rx="2"/>
-                </svg>
-              </button>
-            ) : (
-              <button 
-                type="submit" 
-                disabled={!input.trim()}
-                className="absolute right-3 bottom-3 w-8 h-8 flex items-center justify-center rounded-lg bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 19V5M5 12l7-7 7 7"/>
-                </svg>
-              </button>
-            )}
+            <div className="absolute right-3 bottom-3 flex items-center gap-1.5">
+              <VoiceMicButton
+                onTranscribe={(text) => setInput((prev) => (prev ? prev + ' ' + text : text))}
+                disabled={isLoading}
+              />
+              {isLoading ? (
+                <button 
+                  type="button"
+                  onClick={handleStop}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-white hover:bg-slate-900 transition-all"
+                  title="Interrompi elaborazione"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                  </svg>
+                </button>
+              ) : (
+                <button 
+                  type="submit" 
+                  disabled={!input.trim()}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                  </svg>
+                </button>
+              )}
+            </div>
           </form>
          </div>
         </div>
