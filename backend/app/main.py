@@ -211,6 +211,19 @@ async def outbound_ip():
         return {"error": str(e)}
 
 
+@app.get("/api/internal/speech-config")
+async def speech_config_check():
+    """Temporary diagnostic: check speech env vars presence."""
+    return {
+        "azure_speech_endpoint": bool(settings.azure_speech_endpoint),
+        "azure_speech_endpoint_value": settings.azure_speech_endpoint[:30] + "..." if settings.azure_speech_endpoint else None,
+        "azure_speech_api_key": bool(settings.azure_speech_api_key),
+        "azure_speech_api_key_len": len(settings.azure_speech_api_key) if settings.azure_speech_api_key else 0,
+        "azure_whisper_endpoint": bool(settings.azure_whisper_endpoint),
+        "azure_whisper_api_key": bool(settings.azure_whisper_api_key),
+    }
+
+
 @app.get("/api/internal/architecture")
 async def architecture_info():
     """Mostra architettura del sistema"""
