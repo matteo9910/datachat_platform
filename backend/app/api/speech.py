@@ -108,14 +108,15 @@ async def transcribe_audio(file: UploadFile = File(...)):
             )
 
         if response.status_code != 200:
+            error_body = response.text[:500]
             logger.error(
                 "Azure Whisper API error: status=%d body=%s",
                 response.status_code,
-                response.text[:500],
+                error_body,
             )
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Speech-to-text service returned an error.",
+                detail=f"Speech-to-text service error (upstream {response.status_code}): {error_body}",
             )
 
         result = response.json()
