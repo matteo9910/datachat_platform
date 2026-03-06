@@ -72,6 +72,10 @@ async def _transcribe_azure_speech(
             data={"definition": definition},
         )
 
+    if response.status_code == 422:
+        logger.info("Azure Speech: no language identified (likely silence/noise)")
+        return "", None
+
     if response.status_code != 200:
         error_body = response.text[:500]
         logger.error("Azure Speech API error: status=%d body=%s", response.status_code, error_body)
