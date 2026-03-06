@@ -39,7 +39,11 @@ class Settings(BaseSettings):
     azure_openai_embedding_endpoint: Optional[str] = None
     azure_openai_embedding_deployment: str = "text-embedding-3-large"
 
-    # Azure Whisper (Speech-to-Text)
+    # Azure AI Speech (Fast Transcription API) — primary
+    azure_speech_endpoint: Optional[str] = None
+    azure_speech_api_key: Optional[str] = None
+
+    # Azure Whisper (Speech-to-Text) — fallback
     azure_whisper_endpoint: Optional[str] = None
     azure_whisper_api_key: Optional[str] = None
     azure_whisper_deployment_name: str = "whisper"
