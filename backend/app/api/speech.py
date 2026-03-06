@@ -103,7 +103,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
             response = await client.post(
                 url,
                 headers={"api-key": settings.azure_whisper_api_key},
-                files={"file": (filename, audio_data, content_type or "audio/webm")},
+                files={"file": (filename, audio_data, base_content_type or "audio/webm")},
                 data={"response_format": "verbose_json"},
             )
 
