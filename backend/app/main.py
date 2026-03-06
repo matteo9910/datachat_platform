@@ -199,6 +199,18 @@ async def health():
     return {"status": "healthy", "service": "datachat-bi-platform", "version": "0.5.0"}
 
 
+@app.get("/api/internal/outbound-ip")
+async def outbound_ip():
+    """Temporary diagnostic: check outbound IP as seen by external services."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get("https://api.ipify.org?format=json")
+            return resp.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/api/internal/architecture")
 async def architecture_info():
     """Mostra architettura del sistema"""
