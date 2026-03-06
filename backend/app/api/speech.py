@@ -52,9 +52,10 @@ async def transcribe_audio(file: UploadFile = File(...)):
             detail="Speech-to-text service is not configured.",
         )
 
-    # Validate content type
+    # Validate content type (strip codec params like ";codecs=opus")
     content_type = file.content_type or ""
-    if content_type and content_type not in ALLOWED_CONTENT_TYPES:
+    base_content_type = content_type.split(";")[0].strip()
+    if base_content_type and base_content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported audio format: {content_type}. Supported: WAV, WebM, MP3, OGG.",
@@ -85,7 +86,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
         "audio/mp4": "m4a",
         "audio/ogg": "ogg",
     }
-    file_ext = ext_map.get(content_type, "webm")
+    file_ext = ext_map.get(base_content_type, "webm")
     filename = file.filename or f"audio.{file_ext}"
 
     # Build Azure Whisper API URL
