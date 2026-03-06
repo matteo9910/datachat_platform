@@ -150,6 +150,8 @@ async def transcribe_audio(file: UploadFile = File(...)):
     file_ext = EXT_MAP.get(base_content_type, "webm")
     filename = file.filename or f"audio.{file_ext}"
 
+    errors = []
+
     # --- Primary: Azure AI Speech ---
     if _has_azure_speech():
         try:
@@ -158,8 +160,10 @@ async def transcribe_audio(file: UploadFile = File(...)):
             if text:
                 return TranscribeResponse(text=text, language=language, provider="azure-speech")
             logger.warning("Azure Speech returned empty text, trying fallback")
+            errors.append("azure-speech: empty transcription")
         except Exception as exc:
             logger.warning("Azure Speech failed, trying fallback: %s", exc)
+            errors.append(f"azure-speech: {exc}")
 
     # --- Fallback: Azure Whisper ---
     if _has_azure_whisper():
@@ -174,26 +178,12 @@ async def transcribe_audio(file: UploadFile = File(...)):
             )
         except HTTPException:
             raise
-        except httpx.TimeoutException:
-            logger.error("Azure Whisper API timeout")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Speech-to-text service timed out.",
-            )
-        except httpx.RequestError as exc:
-            logger.error("Azure Whisper request error: %s", exc)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Failed to connect to speech-to-text service.",
-            )
         except Exception as exc:
-            logger.error("Azure Whisper unexpected error: %s", exc)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Speech-to-text fallback error: {exc}",
-            )
+            logger.error("Azure Whisper failed: %s", exc)
+            errors.append(f"azure-whisper: {exc}")
 
+    error_detail = " | ".join(errors) if errors else "No providers configured"
     raise HTTPException(
         status_code=status.HTTP_502_BAD_GATEWAY,
-        detail="All speech-to-text providers failed.",
+        detail=f"All speech-to-text providers failed: {error_detail}",
     )
