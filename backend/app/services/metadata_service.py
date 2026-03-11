@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import desc
 
-from app.models.database import SavedChart, QueryHistory
+from app.models.system import SavedChart
+from app.models.database import QueryHistory
 from app.services.mcp_manager import mcp_postgres_client
 from app.services.chart_service import PlotlyConfigGenerator, ChartAnalyzer
 

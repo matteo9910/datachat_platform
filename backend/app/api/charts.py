@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_db
+from app.database import get_system_db
 from app.services.metadata_service import metadata_service
 
 logger = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class UpdateParametersResponse(BaseModel):
 # ============================================================
 
 @router.post("/save", response_model=SaveChartResponse)
-async def save_chart(request: SaveChartRequest, db: Session = Depends(get_db)):
+async def save_chart(request: SaveChartRequest, db: Session = Depends(get_system_db)):
     """Salva chart con metadata parametrica"""
     try:
         chart = metadata_service.save_chart(
@@ -127,7 +127,7 @@ async def save_chart(request: SaveChartRequest, db: Session = Depends(get_db)):
 async def list_charts(
     limit: int = 100,
     offset: int = 0,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_system_db)
 ):
     """Lista tutti i chart salvati (ordinati per data creazione DESC)"""
     try:
@@ -158,7 +158,7 @@ async def list_charts(
 
 
 @router.get("/{chart_id}", response_model=ChartDetail)
-async def get_chart(chart_id: UUID, db: Session = Depends(get_db)):
+async def get_chart(chart_id: UUID, db: Session = Depends(get_system_db)):
     """Recupera dettagli chart salvato per ID"""
     try:
         chart = metadata_service.get_chart(db=db, chart_id=chart_id)
@@ -188,7 +188,7 @@ async def get_chart(chart_id: UUID, db: Session = Depends(get_db)):
 async def update_chart_parameters(
     chart_id: UUID,
     request: UpdateParametersRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_system_db)
 ):
     """
     Modifica parametri chart e rigenera
@@ -215,7 +215,7 @@ async def update_chart_parameters(
 
 
 @router.delete("/{chart_id}")
-async def delete_chart(chart_id: UUID, db: Session = Depends(get_db)):
+async def delete_chart(chart_id: UUID, db: Session = Depends(get_system_db)):
     """Elimina chart salvato"""
     try:
         deleted = metadata_service.delete_chart(db=db, chart_id=chart_id)
@@ -419,7 +419,7 @@ NUOVA CONFIG PLOTLY:"""
 async def modify_chart_with_nl(
     chart_id: UUID,
     request: ModifyChartNLRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_system_db)
 ):
     """
     Modifica chart usando linguaggio naturale.

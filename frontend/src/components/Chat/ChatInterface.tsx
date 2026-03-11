@@ -812,8 +812,9 @@ const ChatInterface: React.FC = () => {
       });
       
       showToast('Grafico salvato con successo!', 'success');
-    } catch (error) {
-      showToast('Errore nel salvataggio del grafico', 'error');
+    } catch (error: any) {
+      console.error('Save chart error:', error);
+      showToast(error.response?.data?.detail || 'Errore nel salvataggio del grafico', 'error');
     }
   };
 
@@ -843,8 +844,9 @@ const ChatInterface: React.FC = () => {
       });
       
       showToast(`Grafico "${chartTitle}" salvato!`, 'success');
-    } catch (error) {
-      showToast('Errore nel salvataggio del grafico', 'error');
+    } catch (error: any) {
+      console.error('Save single chart error:', error);
+      showToast(error.response?.data?.detail || 'Errore nel salvataggio del grafico', 'error');
     }
   };
 
