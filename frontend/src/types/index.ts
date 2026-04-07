@@ -18,6 +18,9 @@ export interface ChatMessage {
   thinkingSteps?: ThinkingStep[];
   thoughtProcess?: string[];  // Bullet point reasoning like Wren AI
   suggestedFollowups?: string[];
+  trustScore?: number;
+  trustGrade?: 'high' | 'medium' | 'low';
+  trustFactors?: Record<string, any>;
 }
 
 export interface ChatSession {
@@ -102,4 +105,7 @@ export interface ChatQueryResponse {
   thought_process?: string[];  // Bullet point reasoning
   suggested_followups?: string[];
   should_show_chart?: boolean;
+  trust_score?: number;
+  trust_grade?: 'high' | 'medium' | 'low';
+  trust_factors?: Record<string, any>;
 }

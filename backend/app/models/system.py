@@ -251,3 +251,48 @@ class SavedChart(SystemBase):
     plotly_config = Column(JSONB, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=True, onupdate=func.now())
+
+
+# ============================================================
+# IMPORT HISTORY
+# ============================================================
+
+class ImportHistory(SystemBase):
+    """Tracks file imports (CSV/Excel) into the client database."""
+    __tablename__ = "import_history"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid_module.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    original_filename = Column(String(500), nullable=False)
+    table_name = Column(String(255), nullable=False)
+    row_count = Column(Integer, nullable=False, default=0)
+    column_count = Column(Integer, nullable=False, default=0)
+    schema_json = Column(JSONB, nullable=True)
+    source_type = Column(String(50), nullable=True)  # csv, xlsx, erp_sap, erp_zucchetti
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+# ============================================================
+# AUDIT REPORTS
+# ============================================================
+
+class AuditReport(SystemBase):
+    """Data quality audit reports for the connected database."""
+    __tablename__ = "audit_reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid_module.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    overall_score = Column(Integer, nullable=False, default=0)
+    dimensions = Column(JSONB, nullable=True)
+    recommendations = Column(JSONB, nullable=True)
+    summary = Column(Text, nullable=True)
+    table_count = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

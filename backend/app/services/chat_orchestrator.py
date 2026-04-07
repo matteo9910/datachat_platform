@@ -234,6 +234,42 @@ class ChatOrchestrator:
                 chart_data=chart_data if should_show_chart else None
             )
 
+            # 11. Compute Trust Score (multi-factor confidence)
+            trust_score = None
+            trust_grade = None
+            trust_factors = None
+            try:
+                from app.services.trust_score_service import TrustScoreService
+                trust_service = TrustScoreService()
+
+                # Get schema DDL and column list for syntactic validation
+                schema_ddl = ""
+                schema_columns = []
+                try:
+                    schema_ddl = self.vanna.get_schema_from_mcp()
+                    import re
+                    schema_columns = re.findall(
+                        r'^\s+"?(\w+)"?\s+\w+',
+                        schema_ddl, re.MULTILINE
+                    )
+                except Exception:
+                    pass
+
+                trust_result = trust_service.compute_trust_score(
+                    sql=sql,
+                    question=query,
+                    rows=rows,
+                    vanna_service=self.vanna,
+                    schema_ddl=schema_ddl,
+                    schema_columns=schema_columns,
+                )
+                trust_score = trust_result.score
+                trust_grade = trust_result.grade
+                trust_factors = trust_result.factors
+                logger.info(f"Trust score: {trust_score}/100 ({trust_grade})")
+            except Exception as e:
+                logger.warning(f"Trust score computation failed (non-blocking): {e}")
+
             return {
                 "session_id": session_id,
                 "nl_response": nl_response,
@@ -247,7 +283,10 @@ class ChatOrchestrator:
                 "llm_stats": llm_stats,
                 "thinking_steps": thinking_steps,
                 "suggested_followups": suggested_followups,
-                "should_show_chart": should_show_chart
+                "should_show_chart": should_show_chart,
+                "trust_score": trust_score,
+                "trust_grade": trust_grade,
+                "trust_factors": trust_factors,
             }
 
         except Exception as e:

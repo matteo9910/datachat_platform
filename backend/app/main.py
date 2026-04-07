@@ -162,6 +162,14 @@ app.include_router(speech_router)
 from app.api.dashboard import router as dashboard_router
 app.include_router(dashboard_router)
 
+# Include File Import Router
+from app.api.imports import router as imports_router
+app.include_router(imports_router)
+
+# Include Database Audit Router
+from app.api.audit import router as audit_router
+app.include_router(audit_router)
+
 
 # ============================================================
 # MODELS

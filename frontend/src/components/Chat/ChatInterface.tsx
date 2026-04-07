@@ -87,6 +87,68 @@ const SavedThinkingStepItem: React.FC<{ step: ThinkingStep; index: number }> = (
   );
 };
 
+// ─── Trust Score Badge ───────────────────────────────────────────────
+const TrustScoreBadge: React.FC<{
+  score: number;
+  grade?: 'high' | 'medium' | 'low';
+  factors?: Record<string, any>;
+}> = ({ score, grade, factors }) => {
+  const [showDetails, setShowDetails] = useState(false);
+
+  const colorMap = {
+    high:   { bg: 'bg-green-100', text: 'text-green-700', ring: 'ring-green-300', label: 'Alta' },
+    medium: { bg: 'bg-yellow-100', text: 'text-yellow-700', ring: 'ring-yellow-300', label: 'Media' },
+    low:    { bg: 'bg-red-100', text: 'text-red-700', ring: 'ring-red-300', label: 'Bassa' },
+  };
+  const g = grade || (score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low');
+  const c = colorMap[g];
+
+  const factorLabels: Record<string, string> = {
+    complexity: 'Complessita Query',
+    rag_match: 'Match RAG',
+    validation: 'Validazione Risultati',
+    syntactic: 'Sintassi SQL',
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowDetails(!showDetails)}
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ring-1 ${c.bg} ${c.text} ${c.ring} hover:opacity-80 transition-opacity`}
+        title={`Affidabilita ${c.label} (${score}/100)`}
+      >
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 002 0V6zm-1 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+        {score}/100
+      </button>
+
+      {showDetails && factors && (
+        <div className="absolute right-0 top-full mt-1 z-50 w-64 bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-bold text-slate-700">Trust Score</span>
+            <span className={`font-bold ${c.text}`}>{score}/100 — {c.label}</span>
+          </div>
+          <div className="space-y-1.5">
+            {Object.entries(factors).map(([key, f]: [string, any]) => (
+              <div key={key}>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-slate-600">{factorLabels[key] || key}</span>
+                  <span className="font-mono text-slate-500">{Math.round(f.score)}/100 ({(f.weight * 100).toFixed(0)}%)</span>
+                </div>
+                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden mt-0.5">
+                  <div
+                    className={`h-full rounded-full ${f.score >= 70 ? 'bg-green-400' : f.score >= 40 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                    style={{ width: `${Math.min(100, f.score)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface AssistantMessageProps {
   msg: ChatMessage;
   userQuestion?: string;
@@ -135,9 +197,12 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({ msg, userQuestion, 
             Query SQL
           </button>
         </div>
-        <div className="flex items-center gap-2">
-           <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-           <span className="text-[10px] text-slate-400 font-mono">Generato in {((msg.executionTimeMs || 0) / 1000).toFixed(1)}s</span>
+        <div className="flex items-center gap-3">
+           {msg.trustScore != null && <TrustScoreBadge score={msg.trustScore} grade={msg.trustGrade} factors={msg.trustFactors} />}
+           <div className="flex items-center gap-2">
+             <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+             <span className="text-[10px] text-slate-400 font-mono">Generato in {((msg.executionTimeMs || 0) / 1000).toFixed(1)}s</span>
+           </div>
         </div>
       </div>
 
@@ -742,7 +807,10 @@ const ChatInterface: React.FC = () => {
             executionTimeMs: response.execution_time_ms,
             thinkingSteps: finalThinkingSteps.length > 0 ? [...finalThinkingSteps] : undefined,
             thoughtProcess: response.thought_process,
-            suggestedFollowups: response.suggested_followups
+            suggestedFollowups: response.suggested_followups,
+            trustScore: response.trust_score ?? undefined,
+            trustGrade: response.trust_grade ?? undefined,
+            trustFactors: response.trust_factors ?? undefined,
           };
           
           addMessage(assistantMsg);

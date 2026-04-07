@@ -12,6 +12,7 @@ import SetupWizard from './pages/SetupWizard';
 import KnowledgeBase from './pages/KnowledgeBase';
 import Instructions from './pages/Instructions';
 import WriteOperations from './pages/WriteOperations';
+import FileImportWizard from './components/Import/FileImportWizard';
 import AdminPanel from './pages/AdminPanel';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
@@ -105,6 +106,7 @@ const MainApp: React.FC = () => {
       case 'settings': return <Settings />;
       case 'knowledge-base': return <KnowledgeBase />;
       case 'instructions': return <Instructions />;
+      case 'import': return <FileImportWizard />;
       case 'write-ops': return <WriteOperations />;
       case 'admin': return <AdminPanel />;
       default: return <ChatInterface />;

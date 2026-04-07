@@ -181,13 +181,35 @@ class HybridVannaService:
             query_texts=[question],
             n_results=n_results
         )
-        
+
         examples = []
         if results and results["documents"] and results["metadatas"]:
             for doc, meta in zip(results["documents"][0], results["metadatas"][0]):
                 examples.append({
                     "question": doc,
                     "sql": meta.get("sql", "")
+                })
+        return examples
+
+    def get_similar_examples_with_distances(self, question: str, n_results: int = 3) -> List[Dict]:
+        """Trova esempi SQL simili in ChromaDB, includendo le distanze L2."""
+        results = self.sql_collection.query(
+            query_texts=[question],
+            n_results=n_results,
+            include=["documents", "metadatas", "distances"]
+        )
+
+        examples = []
+        if results and results.get("documents") and results.get("metadatas") and results.get("distances"):
+            for doc, meta, dist in zip(
+                results["documents"][0],
+                results["metadatas"][0],
+                results["distances"][0],
+            ):
+                examples.append({
+                    "question": doc,
+                    "sql": meta.get("sql", ""),
+                    "distance": dist,
                 })
         return examples
 

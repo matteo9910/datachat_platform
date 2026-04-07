@@ -91,6 +91,9 @@ class ChatQueryResponse(BaseModel):
     thinking_steps: Optional[List[ThinkingStep]] = None
     suggested_followups: Optional[List[str]] = None
     should_show_chart: bool = True
+    trust_score: Optional[int] = None
+    trust_grade: Optional[str] = None
+    trust_factors: Optional[Dict[str, Any]] = None
 
 
 class ChatHistoryItem(BaseModel):
@@ -179,7 +182,10 @@ async def chat_query(request: ChatQueryRequest):
             error=result.get("error"),
             thinking_steps=thinking_steps,
             suggested_followups=result.get("suggested_followups"),
-            should_show_chart=result.get("should_show_chart", True)
+            should_show_chart=result.get("should_show_chart", True),
+            trust_score=result.get("trust_score"),
+            trust_grade=result.get("trust_grade"),
+            trust_factors=result.get("trust_factors"),
         )
 
     except HTTPException:
@@ -476,7 +482,7 @@ async def chat_query_stream(request: ChatQueryRequest):
                     logger.warning(f"Chart generation failed: {e}")
             
             suggested_followups = orchestrator._generate_suggested_followups(request.query, sql, rows)
-            
+
             orchestrator._add_to_context(
                 session_id=request.session_id or "stream-session",
                 query=request.query,
@@ -484,14 +490,40 @@ async def chat_query_stream(request: ChatQueryRequest):
                 result_count=len(rows),
                 nl_response=nl_response
             )
-            
+
             execution_time_ms = (time.time() - start_time) * 1000
-            
+
             # Estrai thought_process dal reasoning (bullet point testuali)
             thought_process = None
             if reasoning and reasoning.get("thought_process"):
                 thought_process = reasoning.get("thought_process")
-            
+
+            # Compute Trust Score (non-blocking)
+            trust_score = None
+            trust_grade = None
+            trust_factors = None
+            try:
+                from app.services.trust_score_service import TrustScoreService
+                trust_service = TrustScoreService()
+                schema_ddl = ""
+                schema_columns = []
+                try:
+                    schema_ddl = orchestrator.vanna.get_schema_from_mcp()
+                    import re as _re
+                    schema_columns = _re.findall(r'^\s+"?(\w+)"?\s+\w+', schema_ddl, _re.MULTILINE)
+                except Exception:
+                    pass
+                trust_result = trust_service.compute_trust_score(
+                    sql=sql, question=request.query, rows=rows,
+                    vanna_service=orchestrator.vanna,
+                    schema_ddl=schema_ddl, schema_columns=schema_columns,
+                )
+                trust_score = trust_result.score
+                trust_grade = trust_result.grade
+                trust_factors = trust_result.factors
+            except Exception as e:
+                logger.warning(f"Trust score (stream) failed: {e}")
+
             # Final result
             final_result = {
                 "type": "result",
@@ -507,7 +539,10 @@ async def chat_query_stream(request: ChatQueryRequest):
                     "llm_provider": provider,
                     "suggested_followups": suggested_followups,
                     "should_show_chart": should_show_chart,
-                    "thought_process": thought_process
+                    "thought_process": thought_process,
+                    "trust_score": trust_score,
+                    "trust_grade": trust_grade,
+                    "trust_factors": trust_factors,
                 }
             }
             yield f"data: {safe_json_dumps(final_result)}\n\n"

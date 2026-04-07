@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { databaseApi, SchemaResponse, TablePreviewResponse, ConnectionStatus, Relationship, TableInfo } from '../../api/databaseApi';
 import { Icons } from '../Layout/Icons';
+import DataQualityAudit from './DataQualityAudit';
 
 interface TablePosition {
   x: number;
@@ -22,7 +23,7 @@ interface AnalysisReport {
 }
 
 const DatabaseSchema: React.FC = () => {
-  const [activeView, setActiveView] = useState<'relational' | 'tables' | 'analysis'>('relational');
+  const [activeView, setActiveView] = useState<'relational' | 'tables' | 'analysis' | 'audit'>('relational');
   const [schema, setSchema] = useState<SchemaResponse | null>(null);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [selectedTable, setSelectedTable] = useState<string>('');
@@ -396,11 +397,17 @@ const DatabaseSchema: React.FC = () => {
              >
                Esplora Tabelle
              </button>
-             <button 
+             <button
                onClick={() => setActiveView('analysis')}
                className={`px-6 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${activeView === 'analysis' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
              >
                Analisi Database
+             </button>
+             <button
+               onClick={() => setActiveView('audit')}
+               className={`px-6 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${activeView === 'audit' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+             >
+               Data Quality
              </button>
           </div>
         </div>
@@ -867,6 +874,8 @@ const DatabaseSchema: React.FC = () => {
               </div>
             )}
           </section>
+        ) : activeView === 'audit' ? (
+          <DataQualityAudit />
         ) : null}
       </div>
     </div>

@@ -23,6 +23,7 @@ const Sidebar: React.FC = () => {
     { id: 'settings', label: 'Impostazioni', icon: <Icons.Settings /> },
     { id: 'knowledge-base', label: 'Knowledge Base', icon: <Icons.BookOpen />, roles: ['admin', 'analyst'] },
     { id: 'instructions', label: 'Instructions', icon: <Icons.FileText />, roles: ['admin', 'analyst'] },
+    { id: 'import', label: 'Importa Dati', icon: <Icons.Upload />, roles: ['admin', 'analyst'] },
     { id: 'write-ops', label: 'Write Operations', icon: <Icons.PenTool />, roles: ['admin', 'analyst'] },
     { id: 'admin', label: 'Admin Panel', icon: <Icons.Shield />, roles: ['admin'] },
   ];
