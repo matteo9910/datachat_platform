@@ -15,7 +15,7 @@ export interface StreamEvent {
   error?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000');
 
 export const chatApi = {
   async query(request: ChatQueryRequest): Promise<ChatQueryResponse> {

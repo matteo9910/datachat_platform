@@ -226,7 +226,8 @@ Esempio: ["numero_fattura", "codice_articolo", "data_ordine"]"""
         for cs in columns:
             null_clause = "" if cs.nullable else " NOT NULL"
             col_defs.append(f'    "{cs.suggested_name}" {cs.pg_type}{null_clause}')
-        ddl = f'CREATE TABLE IF NOT EXISTS "{table_name_safe}" (\n{",\n".join(col_defs)}\n);'
+        cols_sql = ",\n".join(col_defs)
+        ddl = f'CREATE TABLE IF NOT EXISTS "{table_name_safe}" (\n{cols_sql}\n);'
 
         logger.info(f"Creating table: {table_name_safe} with {len(columns)} columns")
         try:

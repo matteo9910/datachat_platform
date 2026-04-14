@@ -25,6 +25,8 @@ yarn-error.log*
 .env
 .env.local
 .env.production
+# Docker secrets (template .env.docker is tracked, but backend/.env is not)
+backend/.env
 
 # Database
 *.db

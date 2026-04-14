@@ -94,7 +94,7 @@ const DatabaseSchema: React.FC = () => {
   // Load analysis report
   const loadAnalysisReport = async () => {
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const baseUrl = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000');
       const response = await fetch(`${baseUrl}/api/database/analysis-report`);
       const data = await response.json();
       if (data.success !== false) {
@@ -109,7 +109,7 @@ const DatabaseSchema: React.FC = () => {
   const generateAnalysis = async () => {
     setIsAnalyzing(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const baseUrl = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000');
       const response = await fetch(`${baseUrl}/api/database/analyze`, { method: 'POST' });
       const data = await response.json();
       setAnalysisReport(data);

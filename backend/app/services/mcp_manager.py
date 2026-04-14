@@ -5,6 +5,7 @@ Implementa comunicazione via subprocess + JSON-RPC con il server MCP ufficiale
 
 import json
 import logging
+import platform
 import subprocess
 import threading
 import queue
@@ -60,14 +61,16 @@ class MCPPostgreSQLClient:
             return
         
         try:
+            # Use npx.cmd on Windows, npx on Linux/Mac
+            npx_cmd = "npx.cmd" if platform.system() == "Windows" else "npx"
             self.process = subprocess.Popen(
-                ["npx.cmd", "-y", "@modelcontextprotocol/server-postgres", connection_string],
+                [npx_cmd, "-y", "@modelcontextprotocol/server-postgres", connection_string],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
-                shell=True
+                shell=False
             )
             
             self._reader_thread = threading.Thread(target=self._read_responses, daemon=True)

@@ -236,7 +236,7 @@ const Settings: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-wide">Info Sistema</h3>
           <div className="space-y-2 text-sm text-slate-600">
-            <p><span className="font-bold">Backend:</span> http://localhost:8000</p>
+            <p><span className="font-bold">Backend:</span> {import.meta.env.PROD ? window.location.origin + '/api' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')}</p>
             <p><span className="font-bold">Versione:</span> 0.5.0</p>
             <p><span className="font-bold">Architettura:</span> Vanna RAG + Direct PostgreSQL + Multi-Provider LLM</p>
           </div>

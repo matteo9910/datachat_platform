@@ -1,0 +1,38 @@
+services:
+  backend:
+    build: ./backend
+    container_name: datachat-backend
+    env_file:
+      - ./backend/.env          # secrets passati a runtime, non nell'immagine
+    environment:
+      - CHROMADB_PERSIST_DIRECTORY=/data/chromadb
+      - ENVIRONMENT=production
+      - LOG_FILE_PATH=/data/logs/datachat.log
+    volumes:
+      - chromadb_data:/data/chromadb      # ChromaDB embeddings (RAG persistence)
+      - backend_logs:/data/logs           # Application logs
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: datachat-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  chromadb_data:
+    driver: local
+  backend_logs:
+    driver: local
